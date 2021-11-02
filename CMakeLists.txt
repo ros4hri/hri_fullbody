@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(hri_fullbody)
+project(hri_holistic)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -8,8 +8,9 @@ project(hri_fullbody)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  message_generation
+  std_msgs
   rospy
+  hri_msgs
 )
 
 ## System dependencies are found with CMake's conventions

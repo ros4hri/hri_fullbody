@@ -1,0 +1,5 @@
+<launch>
+	<node name="hri_holistic" pkg="hri_holistic" type="holistic.py" output="screen">
+		<param name="rgbImageTopic" value="$(env RGB_IMAGE_TOPIC)"/>
+	</node>
+</launch>
