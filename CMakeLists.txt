@@ -11,6 +11,8 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   rospy
   hri_msgs
+  std_msgs
+  geometry_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -54,11 +56,10 @@ catkin_python_setup()
 # )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+  FILES
+  SpecificPointXYZ.srv
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -68,10 +69,11 @@ catkin_python_setup()
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs  # Or other packages containing msgs
-# )
+generate_messages(
+   DEPENDENCIES
+   std_msgs 
+   geometry_msgs
+ )
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -164,7 +166,7 @@ include_directories(
 #   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 # )
 
-catkin_install_python(PROGRAMS bin/holistic.py
+catkin_install_python(PROGRAMS bin/holistic bin/rs_to_depth
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 ## Mark executables for installation
@@ -194,6 +196,14 @@ catkin_install_python(PROGRAMS bin/holistic.py
 #   # myfile2
 #   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 # )
+
+install(FILES
+#   # myfile1
+#   # myfile2
+#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+    urdf/human-tpl.xacro 
+    DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
 
 #############
 ## Testing ##

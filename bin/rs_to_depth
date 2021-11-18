@@ -1,0 +1,95 @@
+#!/usr/bin/env python3
+
+import numpy as np
+import copy
+import rospy
+from sensor_msgs.msg import Image, CompressedImage, CameraInfo, RegionOfInterest
+from cv_bridge import CvBridge 
+import cv2 
+from message_filters import ApproximateTimeSynchronizer, Subscriber
+from image_geometry import PinholeCameraModel
+from geometry_msgs.msg import PointStamped, Point
+from hri_holistic.srv import SpecificPointXYZ
+
+#*** Code here based on depth_imag_proc and specifically thought for Realsense i400 serie products***#
+#*** Ref for code: https://github.com/ros-perception/image_pipeline/blob/noetic/depth_image_proc/src/nodelets/point_cloud_xyzrgb.cpp ***#
+
+
+class DepthExtractor:
+
+	def __init__(self):
+		print('Depth Extractor instance')
+		self.br = CvBridge()
+		self.resized_publisher = rospy.Publisher('/resized_image/compressed', CompressedImage, queue_size=1)
+
+
+	def compute_xyz_srv(self, req):
+
+		x_rgb = int(req.pixels.point.x)
+		y_rgb = int(req.pixels.point.y)
+
+		if x_rgb >= self.rgb_width:
+			x_rgb = self.rgb_width-1
+
+		if y_rgb >= self.rgb_height:
+			y_rgb = self.rgb_height-1
+
+		#x = (x_px - self.center_x) * self.depth_data[y_px][x_px] * self.constant_x
+		x_d = int(((x_rgb - self.cx_rgb)*self.fx_d/self.fx_rgb) + self.cx_d) 
+		#y = (y_px - self.center_y) * self.depth_data[y_px][x_px] * self.constant_y
+		y_d = int(((y_rgb - self.cy_rgb)*self.fy_d/self.fy_rgb) + self.cy_d)
+		z = self.depth_data[y_d][x_d]/1000
+		x = (x_d - self.cx_d) * z / self.fx_d
+		y = (y_d - self.cy_d) * z / self.fy_d
+		print(x_d, y_d, x, y, z)
+
+		req.pixels.header.stamp = rospy.Time.now()
+		return PointStamped(req.pixels.header, Point(x, y, z))
+
+
+	def got_full_information(self, depth_camera_info, rgb_camera_info, depth_msg, rgb_msg):
+
+		depth_model = PinholeCameraModel()
+		rgb_model = PinholeCameraModel()
+
+		depth_model.fromCameraInfo(depth_camera_info)
+		rgb_model.fromCameraInfo(rgb_camera_info)
+
+		self.cx_d, self.cy_d = depth_model.cx(), depth_model.cy()
+		self.cx_rgb, self.cy_rgb = rgb_model.cx(), rgb_model.cy()
+		self.fx_d, self.fy_d = depth_model.fx(), depth_model.fy()
+		self.fx_rgb, self.fy_rgb = rgb_model.fx(), rgb_model.fy()
+
+		self.depth_data = self.br.imgmsg_to_cv2(depth_msg, "16UC1") #Realsense depth encoding: 16UC1
+
+		self.depth_width, self.depth_height = depth_camera_info.width, depth_camera_info.height
+		self.rgb_width, self.rgb_height = rgb_camera_info.width, rgb_camera_info.height
+
+
+	def init_node(self, depth_camera_info_topic, rgb_camera_info_topic, depth_image_topic, rgb_image_topic):
+		self.tss = ApproximateTimeSynchronizer([Subscriber(depth_camera_info_topic, CameraInfo, queue_size=1, buff_size = 2*24), \
+		 	Subscriber(rgb_camera_info_topic, CameraInfo, queue_size=1, buff_size = 2**24), \
+			Subscriber(depth_image_topic, Image, queue_size=1, buff_size = 2**24), \
+			Subscriber(rgb_image_topic, CompressedImage, queue_size=1, buff_size = 2**24)], 1, 0.05)
+		self.tss.registerCallback(self.got_full_information)
+		s = rospy.Service('compute_image_point_position', SpecificPointXYZ, self.compute_xyz_srv)
+
+
+if __name__=='__main__':
+	rospy.init_node('rs_to_depth_hri', anonymous=True)
+	if rospy.has_param('~rgbImageTopic'):
+		print('********** Found rgb image topic parameter: ', rospy.get_param('~rgbImageTopic'), ' *****************')
+		rgb_image_topic = rospy.get_param('~rgbImageTopic')
+	if rospy.has_param('~depthImageTopic'):
+		print('********** Found depth image topic parameter: ', rospy.get_param('~depthImageTopic'), ' *****************')
+		depth_image_topic = rospy.get_param('~depthImageTopic')
+	if rospy.has_param('~rgbCameraInfoTopic'):
+		print('********** Found rgb camera info topic parameter: ', rospy.get_param('~rgbCameraInfoTopic'), ' *****************')
+		rgb_camera_info_topic = rospy.get_param('~rgbCameraInfoTopic')
+	if rospy.has_param('~depthCameraInfoTopic'):
+		print('********** Found camera info topic parameter: ', rospy.get_param('~depthCameraInfoTopic'), ' *****************')
+		depth_camera_info_topic = rospy.get_param('~depthCameraInfoTopic')
+	rs2d = DepthExtractor()
+	rs2d.init_node(depth_camera_info_topic, rgb_camera_info_topic, depth_image_topic, rgb_image_topic)
+	rospy.spin()
+	cv2.destroyAllWindows()

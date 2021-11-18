@@ -1,0 +1,3 @@
+geometry_msgs/PointStamped pixels
+---
+geometry_msgs/PointStamped position

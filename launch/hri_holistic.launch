@@ -1,5 +1,12 @@
 <launch>
-	<node name="hri_holistic" pkg="hri_holistic" type="holistic.py" output="screen">
+	<node name="rs_to_depth_hri" pkg="hri_holistic" type="rs_to_depth" output="screen">
+		<param name="depthImageTopic" value="$(env DEPTH_IMAGE_TOPIC)"/>
+		<param name="rgbCameraInfoTopic" value="$(env RGB_CAMERA_INFO_TOPIC)"/>
+		<param name="depthCameraInfoTopic" value="$(env DEPTH_CAMERA_INFO_TOPIC)"/>
 		<param name="rgbImageTopic" value="$(env RGB_IMAGE_TOPIC)"/>
 	</node>
+	<node name="hri_holistic" pkg="hri_holistic" type="holistic" output="screen">
+		<param name="rgbImageTopic" value="$(env RGB_IMAGE_TOPIC)"/>
+	</node>
+	<node type="rviz" name="rviz" pkg="rviz" args="-d $(find hri_holistic)/rviz/holistic_urdf_visualization.rviz" />
 </launch>

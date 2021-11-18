@@ -1,0 +1,289 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="human">
+
+    <!-- User-settable parameters (eg, xacro human-tpl.xacro id:=xyz) -->
+    <xacro:property name="id" value="$(arg id)" />
+    <xacro:property name="height" value="$(arg height)" />
+
+    <!-- Parameters defaults -->
+    <xacro:arg name="id" default="default" />
+    <xacro:arg name="height" default="1.65" />
+
+    <!-- human body proportions taken from https://www.thedrawingsource.com/figure-drawing-proportions.html -->
+    <xacro:property name="size_unit" value="${height/7.5}" />
+    <xacro:property name="head_radius" value="${size_unit/2}" />
+    <xacro:property name="neck_length" value="${size_unit * 0.25}" />
+    <xacro:property name="neck_shoulder_length" value="${size_unit*0.8}" />
+    <xacro:property name="upperarm_length" value="${size_unit*1.6}" />
+    <xacro:property name="forearm_length" value="${size_unit}" />
+    <xacro:property name="torso_height" value="${size_unit*2.75}" />
+    <xacro:property name="waist_length" value="${size_unit*1.2}" />
+    <xacro:property name="tight_length" value="${size_unit*1.5}" />
+    <xacro:property name="tibia_length" value="${size_unit*2}" />
+
+    <xacro:property name="arm_radius" value="0.04" />
+
+    <!-- Materials -->
+    <material name="yellow-skin">
+        <color rgba="1 0.7 0 1" />
+    </material>
+
+    <material name="yellow-skin-dark">
+        <color rgba="0.9 0.6 0 1" />
+    </material>
+
+
+    <material name="black">
+        <color rgba="0 0 0 1" />
+    </material>
+
+    <!--***********-->
+
+    <link name="body_${id}">
+    </link>
+
+    <link name="waist_${id}">
+    </link>
+
+    <link name="torso_${id}">
+        <visual>
+            <geometry>
+                <sphere radius="${waist_length/2}"/>
+            </geometry>
+            <material name="yellow-skin" />
+            <origin rpy="0 0 0" xyz="0 0 -${torso_height*2/3}" />
+        </visual>
+        <visual>
+            <geometry>
+                <sphere radius="${neck_shoulder_length}"/>
+            </geometry>
+            <material name="yellow-skin" />
+            <origin rpy="0 0 0" xyz="0 0 -${torso_height/4}" />
+        </visual>
+        <!--
+        <visual>
+            <geometry>
+                <box size="0.2 ${waist_length * 1.2} ${torso_height}"/>
+            </geometry>
+            <material name="yellow-skin" />
+            <origin rpy="0 0 0" xyz="0 0 -${torso_height/2}" />
+        </visual>
+        -->
+    </link>
+
+    <joint name="torso_${id}" type="fixed">
+        <parent link="waist_${id}"/>
+        <child link="torso_${id}"/>
+        <origin rpy="0 0 0" xyz="0 0 ${torso_height}" />
+    </joint>
+
+
+    <joint name="waist_${id}" type="revolute">
+        <axis xyz="0 1 0" />
+        <limit effort="1000" lower="-.2" upper="1." velocity="0.5" />
+        <parent link="body_${id}"/>
+        <child link="waist_${id}"/>
+        <origin rpy="0 0 0" xyz="0 0 0" />
+    </joint>
+
+    <link name="head_r_${id}">
+    </link>
+    <link name="head_y_${id}">
+    </link>
+    <link name="head_p_${id}">
+    </link>
+
+    <link name="head_${id}">
+        <visual>
+            <geometry>
+                <sphere radius="${head_radius}"/>
+            </geometry>
+            <material name="yellow-skin" />
+            <origin rpy="0 0 0" xyz="${-head_radius/2} 0 0" />
+        </visual>
+        <!-- eyes -->
+        <visual>
+            <geometry>
+                <sphere radius="${head_radius/5}"/>
+            </geometry>
+            <material name="black" />
+            <origin rpy="0 0 0" xyz="${head_radius * .9 - head_radius/2} ${2*head_radius/5} 0" />
+        </visual>
+        <visual>
+            <geometry>
+                <sphere radius="${head_radius/5}"/>
+            </geometry>
+            <material name="black" />
+            <origin rpy="0 0 0" xyz="${head_radius * .9 - head_radius/2} -${2*head_radius/5} 0" />
+        </visual>
+    </link>
+    <joint name="head_r_${id}" type="revolute">
+        <axis xyz="1 0 0" />
+        <limit effort="1000" lower="-1." upper="1." velocity="0.5" />
+        <parent link="torso_${id}"/>
+        <child link="head_r_${id}"/>
+        <origin rpy="0 0 0" xyz="0 0 ${neck_length}" />
+    </joint>
+    <joint name="head_y_${id}" type="revolute">
+        <axis xyz="0 0 1" />
+        <limit effort="1000" lower="-1.4" upper="1.4" velocity="0.5" />
+        <parent link="head_r_${id}"/>
+        <child link="head_y_${id}"/>
+        <origin rpy="0 0 0" xyz="0 0 0" />
+    </joint>
+    <joint name="head_p_${id}" type="revolute">
+        <axis xyz="0 -1 0" />
+        <limit effort="1000" lower="-1.5" upper="1.5" velocity="0.5" />
+        <parent link="head_y_${id}"/>
+        <child link="head_p_${id}"/>
+        <origin rpy="0 0 0" xyz="0 0 0" />
+    </joint>
+
+    <joint name="head_${id}" type="fixed">
+        <parent link="head_p_${id}"/>
+        <child link="head_${id}"/>
+        <origin rpy="0 0 0" xyz="${head_radius/2} 0 ${head_radius}" />
+    </joint>
+
+
+
+    <xacro:macro name="limb_segment" params="name reflect length parent attachment_origin attachment_rotation link_name link_axis link_min_limit link_max_limit">
+        <link name="${name}">
+            <visual>
+                <geometry>
+                    <cylinder length="${length}" radius="${arm_radius}"/>
+                </geometry>
+                <material name="yellow-skin" />
+                <origin rpy="0 0 0" xyz="0 0 -${length/2}" />
+            </visual>
+            <visual>
+                <geometry>
+                    <sphere radius="${1.5 * arm_radius}"/>
+                </geometry>
+                <material name="yellow-skin" />
+                <origin rpy="0 0 0" xyz="0 0 -${length}" />
+            </visual>
+        </link>
+
+        <joint name="${link_name}" type="revolute">
+            <axis xyz="${link_axis}" />
+            <limit effort="1000" lower="${link_min_limit}" upper="${link_max_limit}" velocity="0.5" />
+            <parent link="${parent}"/>
+            <child link="${name}"/>
+            <origin rpy="${attachment_rotation}" xyz="${attachment_origin}" />
+        </joint>
+    </xacro:macro>
+
+    <xacro:macro name="arm" params="suffix parent reflect">
+        <link name="${suffix}_y_shoulder_${id}">
+            <visual>
+            <geometry>
+                <sphere radius="${2 * arm_radius}"/>
+            </geometry>
+            <material name="yellow-skin-dark" />
+            <origin rpy="0 0 0" xyz="0 0 0" />
+        </visual>
+        </link>
+        <joint name="${suffix}_y_shoulder_${id}" type="revolute">
+            <axis xyz="0 0 ${reflect * -1}" />
+            <limit effort="1000" lower="-1.7" upper="1.1" velocity="0.5" />
+            <parent link="${parent}"/>
+            <child link="${suffix}_y_shoulder_${id}"/>
+            <origin rpy="0 0 0" xyz="0 ${reflect * neck_shoulder_length} 0" />
+        </joint>
+        <link name="${suffix}_p_shoulder_${id}">
+        </link>
+        <joint name="${suffix}_p_shoulder_${id}" type="revolute">
+            <axis xyz="${reflect} 0 0" />
+            <limit effort="1000" lower="-0.4" upper="3.3" velocity="0.5" />
+            <parent link="${suffix}_y_shoulder_${id}"/>
+            <child link="${suffix}_p_shoulder_${id}"/>
+            <origin rpy="0 0 0" xyz="0 0 0" />
+        </joint>
+        <xacro:limb_segment name="${suffix}_shoulder_${id}"
+                     length = "${upperarm_length}"
+                     reflect="${reflect}"
+                     parent="${suffix}_p_shoulder_${id}"
+                     attachment_origin="0 0 0"
+                     attachment_rotation="0 0 0"
+                     link_name="${suffix}_r_shoulder_${id}"
+                     link_axis="0 0 ${reflect}"
+                     link_min_limit="-1.7"
+                     link_max_limit="1.5" />
+         <xacro:limb_segment name="${suffix}_elbow_${id}"
+                     length = "${forearm_length}"
+                     reflect="${reflect}"
+                     parent="${suffix}_shoulder_${id}"
+                     attachment_origin="0 0 -${upperarm_length}"
+                     attachment_rotation="0 0 0"
+                     link_name="${suffix}_elbow_${id}"
+                     link_axis="0 -1 0"
+                     link_min_limit="0"
+                     link_max_limit="2.5" />
+
+        <link name="${suffix}_wrist_${id}">
+        </link>
+        <joint name="${suffix}_wrist_${id}" type="fixed">
+            <parent link="${suffix}_elbow_${id}"/>
+            <child link="${suffix}_wrist_${id}"/>
+            <origin rpy="0 0 0" xyz="0 0 -${forearm_length}" />
+        </joint>
+
+    </xacro:macro>
+
+    <xacro:arm suffix="l" reflect="1" parent="torso_${id}" />
+    <xacro:arm suffix="r" reflect="-1" parent="torso_${id}" />
+
+    <xacro:macro name="leg" params="suffix parent reflect">
+        <link name="${suffix}_y_hip_${id}">
+            <visual>
+            <geometry>
+                <sphere radius="${2 * arm_radius}"/>
+            </geometry>
+            <material name="yellow-skin-dark" />
+            <origin rpy="0 0 0" xyz="0 0 0" />
+        </visual>
+        </link>
+        <joint name="${suffix}_y_hip_${id}" type="revolute">
+            <axis xyz="0 0 -1" />
+            <limit effort="1000" lower="-.1" upper="0.6" velocity="0.5" />
+            <parent link="${parent}"/>
+            <child link="${suffix}_y_hip_${id}"/>
+            <origin rpy="0 0 0" xyz="0 ${reflect * waist_length/2} 0" />
+        </joint>
+        <xacro:limb_segment name="${suffix}_hip_${id}"
+                     length = "${tight_length}"
+                     reflect="${reflect}"
+                     parent="${suffix}_y_hip_${id}"
+                     attachment_origin="0 0 0"
+                     attachment_rotation="0 0 0"
+                     link_name="${suffix}_p_hip_${id}"
+                     link_axis="0 -1 0"
+                     link_min_limit="-.4"
+                     link_max_limit="0.7" />
+        <xacro:limb_segment name="${suffix}_knee_${id}"
+                     length = "${tibia_length}"
+                     reflect="${reflect}"
+                     parent="${suffix}_hip_${id}"
+                     attachment_origin="0 0 -${tight_length}"
+                     attachment_rotation="0 0 0"
+                     link_name="${suffix}_knee_${id}"
+                     link_axis="0 -1 0"
+                     link_min_limit="-2.5"
+                     link_max_limit="0" />
+        <link name="${suffix}_ankle_${id}">
+        </link>
+        <joint name="${suffix}_ankle_${id}" type="fixed">
+            <parent link="${suffix}_knee_${id}"/>
+            <child link="${suffix}_ankle_${id}"/>
+            <origin rpy="0 0 0" xyz="0 0 -${tibia_length}" />
+        </joint>
+
+    </xacro:macro>
+
+    <xacro:leg suffix="l" reflect="1" parent="body_${id}" />
+    <xacro:leg suffix="r" reflect="-1" parent="body_${id}" />
+
+
+
+</robot>

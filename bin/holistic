@@ -1,0 +1,588 @@
+#!/usr/bin/env python3
+
+import math
+import uuid
+import numpy as np
+import time
+import sys
+import copy
+from collections import deque
+import subprocess
+
+import rospy
+import rosparam
+import tf
+from sensor_msgs.msg import Image, CompressedImage, CameraInfo, RegionOfInterest 
+from sensor_msgs.msg import JointState
+from hri_msgs.msg import Skeleton2D, PointOfInterest2D, IdsList, RegionOfInterestStamped
+from geometry_msgs.msg import Point, PointStamped
+
+from cv_bridge import CvBridge 
+import cv2 
+
+import mediapipe as mp
+mp_drawing = mp.solutions.drawing_utils
+mp_drawing_styles = mp.solutions.drawing_styles
+mp_holistic = mp.solutions.holistic
+mp_pose = mp.solutions.pose
+
+from protobuf_to_dict import protobuf_to_dict
+
+from hri_holistic.urdf_generator import make_urdf_human
+from hri_holistic.jointstate import compute_jointstate, HUMAN_JOINT_NAMES, compute_jointstate_mediapipe
+from hri_holistic.srv import SpecificPointXYZ
+from ikpy import chain
+import io
+
+#Visualization import
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D, axes3d
+
+VISUAL_DEBUG = True
+TEXTUAL_DEBUG = False
+PIXEL_THRESHOLD = 10000.0 #Maybe we could set this basing the evaluation on some ground truth
+CACHE_SIZE = 30 #This value is no more used in this version of the code
+
+# if set to true, face IDs will be generated as a sequence of integers,
+# starting at 00001.
+# Otherwise, face IDs will be a random set of 5 characters in [0-9a-f]
+DETERMINISTIC_ID = True
+
+PREALLOCATE_PUBLISHERS = DETERMINISTIC_ID
+PREALLOCATION_SIZE = 150
+
+# nb of pixels between the centers of to successive regions of interest to
+# consider they belong to the same person
+MAX_ROIS_DISTANCE = 100
+
+# max scale factor between two successive regions of interest to consider they
+# belong to the same person
+MAX_SCALING_ROIS = 1.2
+
+
+#Parameters definition for visualization purposes
+_PRESENCE_THRESHOLD = 0.5
+_VISIBILITY_THRESHOLD = 0.5
+_RGB_CHANNELS = 3
+
+WHITE_COLOR = (224, 224, 224)
+BLACK_COLOR = (0, 0, 0)
+RED_COLOR = (0, 0, 255)
+GREEN_COLOR = (0, 128, 0)
+BLUE_COLOR = (255, 0, 0)
+
+#Parameter definition for the bounding box resizer
+BB_MULT = 0.0
+FACE_BB_MULT = 0.5
+
+
+def _normalized_to_pixel_coordinates(
+        normalized_x: float, normalized_y: float, image_width: int,
+        image_height: int):
+
+    x_px = min(math.floor(normalized_x * image_width), image_width - 1)
+    y_px = min(math.floor(normalized_y * image_height), image_height - 1)
+    return x_px, y_px
+
+def _make_2d_skeleton_msg(header, pose_2d):
+  skel = Skeleton2D()
+  skel.header = header
+
+  # Mediapipe 2D keypoint order:
+  # ['nose', 'left_eye_inner', 'left_eye', 'left_eye_outer',
+  #   'right_eye_inner', 'right_eye', 'right_eye_outer',
+  #   'left_ear', 'right_ear', 'mouth_left', 'mouth_right',
+  #   'left_shoulder', 'right_shoulder', 'left_elbow', 'right_elbow',
+  #   'left_wrist', 'right_wrist', 'left_pinky', 'right_pinky',
+  #   'left_index', 'right_index', 'left_thumb', 'right_thumb',
+  #   'left_hip', 'right_hip', 'left_knee', 'right_knee',
+  #   'left_ankle', 'right_ankle', 'left_heel', 'right_heel',
+  #   'left_foot_index', 'right_foot_index']  
+
+  skel.skeleton = [None] * 18 
+
+  skel.skeleton[Skeleton2D.NOSE] =           PointOfInterest2D(x=pose_2d[0].get('x'), y=pose_2d[0].get('y'), c=pose_2d[0].get('visibility'))#mediapipe_ordered_kpt[0]
+  skel.skeleton[Skeleton2D.LEFT_SHOULDER] =  PointOfInterest2D(x=pose_2d[11].get('x'), y=pose_2d[11].get('y'), c=pose_2d[11].get('visibility'))#mediapipe_ordered_kpt[11]
+  skel.skeleton[Skeleton2D.LEFT_ELBOW] =     PointOfInterest2D(x=pose_2d[13].get('x'), y=pose_2d[13].get('y'), c=pose_2d[13].get('visibility'))#mediapipe_ordered_kpt[13]
+  skel.skeleton[Skeleton2D.LEFT_WRIST] =     PointOfInterest2D(x=pose_2d[15].get('x'), y=pose_2d[15].get('y'), c=pose_2d[15].get('visibility'))#mediapipe_ordered_kpt[15]
+  skel.skeleton[Skeleton2D.LEFT_HIP] =       PointOfInterest2D(x=pose_2d[23].get('x'), y=pose_2d[23].get('y'), c=pose_2d[23].get('visibility'))#mediapipe_ordered_kpt[23]
+  skel.skeleton[Skeleton2D.LEFT_KNEE] =      PointOfInterest2D(x=pose_2d[25].get('x'), y=pose_2d[25].get('y'), c=pose_2d[25].get('visibility'))#mediapipe_ordered_kpt[25]
+  skel.skeleton[Skeleton2D.LEFT_ANKLE] =     PointOfInterest2D(x=pose_2d[27].get('x'), y=pose_2d[27].get('y'), c=pose_2d[27].get('visibility'))#mediapipe_ordered_kpt[27]
+  skel.skeleton[Skeleton2D.RIGHT_SHOULDER] = PointOfInterest2D(x=pose_2d[12].get('x'), y=pose_2d[12].get('y'), c=pose_2d[12].get('visibility'))#mediapipe_ordered_kpt[12]
+  skel.skeleton[Skeleton2D.RIGHT_ELBOW] =    PointOfInterest2D(x=pose_2d[14].get('x'), y=pose_2d[14].get('y'), c=pose_2d[14].get('visibility'))#mediapipe_ordered_kpt[14]
+  skel.skeleton[Skeleton2D.RIGHT_WRIST] =    PointOfInterest2D(x=pose_2d[16].get('x'), y=pose_2d[16].get('y'), c=pose_2d[16].get('visibility'))#mediapipe_ordered_kpt[16]
+  skel.skeleton[Skeleton2D.RIGHT_HIP] =      PointOfInterest2D(x=pose_2d[24].get('x'), y=pose_2d[24].get('y'), c=pose_2d[24].get('visibility'))#mediapipe_ordered_kpt[24]
+  skel.skeleton[Skeleton2D.RIGHT_KNEE] =     PointOfInterest2D(x=pose_2d[26].get('x'), y=pose_2d[26].get('y'), c=pose_2d[26].get('visibility'))#mediapipe_ordered_kpt[26]
+  skel.skeleton[Skeleton2D.RIGHT_ANKLE] =    PointOfInterest2D(x=pose_2d[28].get('x'), y=pose_2d[28].get('y'), c=pose_2d[28].get('visibility'))#mediapipe_ordered_kpt[28]
+  skel.skeleton[Skeleton2D.RIGHT_EYE] =      PointOfInterest2D(x=pose_2d[5].get('x'), y=pose_2d[5].get('y'), c=pose_2d[5].get('visibility'))#mediapipe_ordered_kpt[5]
+  skel.skeleton[Skeleton2D.LEFT_EYE] =       PointOfInterest2D(x=pose_2d[2].get('x'), y=pose_2d[2].get('y'), c=pose_2d[2].get('visibility'))#mediapipe_ordered_kpt[2]
+  skel.skeleton[Skeleton2D.RIGHT_EAR] =      PointOfInterest2D(x=pose_2d[8].get('x'), y=pose_2d[8].get('y'), c=pose_2d[8].get('visibility'))#mediapipe_ordered_kpt[8]
+  skel.skeleton[Skeleton2D.LEFT_EAR] =       PointOfInterest2D(x=pose_2d[7].get('x'), y=pose_2d[7].get('y'), c=pose_2d[7].get('visibility'))#mediapipe_ordered_kpt[7]
+  skel.skeleton[Skeleton2D.NECK] =           PointOfInterest2D((skel.skeleton[Skeleton2D.LEFT_SHOULDER].x+skel.skeleton[Skeleton2D.RIGHT_SHOULDER].x)/2,\
+                                                                (skel.skeleton[Skeleton2D.LEFT_SHOULDER].y+skel.skeleton[Skeleton2D.RIGHT_SHOULDER].y)/2,\
+                                                                 min(skel.skeleton[Skeleton2D.LEFT_SHOULDER].c, skel.skeleton[Skeleton2D.RIGHT_SHOULDER].c))  #mediapipe_ordered_kpt[0] #I have to update with the avg between left and right shoulder
+
+  return skel
+
+def _get_bounding_box_limits(face_landmarks, image_width, image_height):
+  x_max = 0.0
+  y_max = 0.0
+  x_min = 1.0
+  y_min = 1.0
+  #for result in results:
+  for data_point in face_landmarks:
+    if x_max < data_point.x:
+      x_max = data_point.x
+    if y_max < data_point.y:
+      y_max = data_point.y
+    if x_min > data_point.x:
+      x_min = data_point.x
+    if y_min > data_point.y:
+      y_min = data_point.y
+
+  delta_x = x_max - x_min
+  delta_y = y_max - y_min
+
+  x_min -= BB_MULT*delta_x
+  y_min -= BB_MULT*delta_y
+  x_max += BB_MULT*delta_x
+  y_max += BB_MULT*delta_y
+  x_min, y_min = _normalized_to_pixel_coordinates(x_min, y_min, image_width, image_height)
+  x_max, y_max = _normalized_to_pixel_coordinates(x_max, y_max, image_width, image_height)
+  return x_min, y_min, x_max, y_max
+
+def _distance_rois(bb1, bb2):
+  x1, y1 = bb1.x_offset + bb1.width/2, bb1.y_offset + bb1.height/2
+  x2, y2 = bb2.x_offset + bb2.width/2, bb2.y_offset + bb2.height/2
+
+  return (x1-x2) * (x1-x2) + (y1-y2) * (y1-y2)
+
+class HolisticDetector:
+
+  def __init__(self):
+
+    self.detector = mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5)
+
+    self.from_depth_image = False
+    
+    self.x_min_face = 1.00
+    self.y_min_face = 1.00
+    self.x_max_face = 0.00
+    self.y_max_face = 0.00
+
+    self.x_min_body = 1.00
+    self.y_min_body = 1.00
+    self.x_max_body = 0.00
+    self.y_max_body = 0.00
+
+    # ID -> (publisher, RoI, nb_frames_visible)
+    self.detectedFaces = {}
+    self.detectedBodies = {} 
+
+    self.visual_pub = rospy.Publisher('/holistic/visual', Image, queue_size=1)
+    self.skel_pub = rospy.Publisher('/holistic/skeleton', Skeleton2D, queue_size=1)
+    self.js_pub = rospy.Publisher('/test_joint_states', JointState, queue_size=1)
+
+    self.br = CvBridge()
+
+    self.last_face_id = 1
+    self.last_body_id = 1
+
+    # 1. generate a URDF model for this body, and set it on the
+    #    ROS parameter server
+    self.body_id = "test"
+    self.urdf = make_urdf_human(self.body_id) #test for just one person detected
+    rospy.loginfo("Setting URDF description for body <%s> (param name: human_description_%s)" % (self.body_id, self.body_id))
+    self.human_description = "human_description_%s" % self.body_id
+    rosparam.set_param_raw(self.human_description, self.urdf)
+
+    self.urdf_file = io.StringIO(self.urdf)
+    self.r_arm_chain = chain.Chain.from_urdf_file(self.urdf_file,
+                                             base_elements=["r_y_shoulder_%s" % self.body_id],
+                                             base_element_type="joint",
+                                             active_links_mask=[False, True, True, True, True, False])
+    self.urdf_file.seek(0)
+    self.l_arm_chain = chain.Chain.from_urdf_file(self.urdf_file,
+                                             base_elements=["l_y_shoulder_%s" % self.body_id],
+                                             base_element_type="joint",
+                                             active_links_mask=[False, True, True, True, True, False])
+    self.urdf_file.seek(0)
+    self.r_leg_chain = chain.Chain.from_urdf_file(self.urdf_file,
+                                             base_elements=["r_y_hip_%s" % self.body_id],
+                                             base_element_type="joint",
+                                             active_links_mask=[False, True, True, True, False])
+    self.urdf_file.seek(0)
+    self.l_leg_chain = chain.Chain.from_urdf_file(self.urdf_file,
+                                             base_elements=["l_y_hip_%s" % self.body_id],
+                                             base_element_type="joint",
+                                             active_links_mask=[False, True, True, True, False])
+
+    self.ik_chains = {} # maps a body id to the IKpy chains
+    self.ik_chains[self.body_id] = [self.r_arm_chain, self.l_arm_chain, self.r_leg_chain, self.l_leg_chain]
+
+    # 2. create the publishers for the 2D skeleton and joint state
+    #prefix = TOPIC_PREFIX + "%s/" % self.body_id
+    #self.publishers[body_id] = [
+            #rospy.Publisher(prefix + "skeleton2d", Skeleton2D, queue_size=1),
+            #rospy.Publisher(prefix + "joint_states", JointState, queue_size=1)
+            #] ==> At this point, as I am only testing the human model, I am using my own defined publishers
+
+    # 3. spawn a new robot_state_publisher process, which will publish the
+    #    TF frames for this body
+    rospy.loginfo("Spawning a instance of robot_state_publisher for this body...")
+    cmd =["rosrun", "robot_state_publisher", "robot_state_publisher", 
+          "__name:=robot_state_publisher_body_%s" % self.body_id,
+          "joint_states:=%s" % ("test_joint_states"),
+          "robot_description:=%s" % self.human_description,
+          "_publish_frequency:=25",
+          "_use_tf_static:=false"
+          ]
+    rospy.loginfo("Executing: %s" % " ".join(cmd))
+    proc = subprocess.Popen(cmd,
+                      stdout=sys.stdout,
+                      stderr=subprocess.STDOUT)
+    self.robot_state_publishers = {}
+    self.robot_state_publishers[self.body_id] = proc
+
+    if PREALLOCATE_PUBLISHERS:
+        self.face_pubs = {"%05d" % i : rospy.Publisher("/humans/faces/%05d/roi" % i, RegionOfInterestStamped, queue_size=1) for i in range(1,PREALLOCATION_SIZE)}
+        self.body_pubs = {"%05d" % i : rospy.Publisher("/humans/bodies/%05d/roi" % i, RegionOfInterestStamped, queue_size=1) for i in range(1,PREALLOCATION_SIZE)}
+
+    self.faces_pub = rospy.Publisher("/humans/faces/tracked", IdsList, queue_size=1)
+    self.bodies_pub = rospy.Publisher("/humans/bodies/tracked", IdsList, queue_size=1)
+
+    self.tb = tf.TransformBroadcaster()
+
+
+  def ask_for_position(self, x_px, y_px):
+
+    try:
+      service = rospy.ServiceProxy('compute_image_point_position', SpecificPointXYZ)
+      req = PointStamped()
+      req.point.x = x_px
+      req.point.y = y_px
+      req.header.stamp = rospy.Time.now()
+      res = service(req)
+      return np.array([res.position.point.x, res.position.point.y, res.position.point.z])
+    except rospy.ServiceException as e:
+      print("Service call failed: %s"%e)
+
+
+  def make_jointstate(self, body_id, original_image, pose_3d, pose_2d):
+
+    js = JointState()
+    js.header = copy.copy(original_image.header)
+    js.name = [jn + "_%s" % body_id for jn in HUMAN_JOINT_NAMES]
+
+    if self.from_depth_image:
+      torso_px = _normalized_to_pixel_coordinates((pose_3d[23].get('x')+pose_3d[24].get('x'))/2, (pose_3d[23].get('y')+pose_3d[24].get('y'))/2, self.img_width, self.img_height)
+      torso = self.ask_for_position(torso_px[0], torso_px[1])
+      l_wrist_px = _normalized_to_pixel_coordinates(pose_3d[15].get('x'), pose_3d[15].get('y'), self.img_width, self.img_height)
+      l_wrist = self.ask_for_position(l_wrist_px[0], l_wrist_px[1])
+      l_ankle_px = _normalized_to_pixel_coordinates(pose_3d[27].get('x'), pose_3d[27].get('y'), self.img_width, self.img_height)
+      l_ankle = self.ask_for_position(l_ankle_px[0], l_ankle_px[1])
+      r_wrist_px = _normalized_to_pixel_coordinates(pose_3d[16].get('x'), pose_3d[16].get('y'), self.img_width, self.img_height)
+      r_wrist = self.ask_for_position(r_wrist_px[0], r_wrist_px[1])
+      r_ankle_px = _normalized_to_pixel_coordinates(pose_3d[28].get('x'), pose_3d[28].get('y'), self.img_width, self.img_height)
+      r_ankle = self.ask_for_position(r_ankle_px[0], r_ankle_px[1])
+      nose_px = _normalized_to_pixel_coordinates(pose_3d[0].get('x'), pose_3d[0].get('y'), self.img_width, self.img_height)
+      nose = self.ask_for_position(nose_px[0], nose_px[1])
+      feet_px = _normalized_to_pixel_coordinates((pose_3d[31].get('x')+pose_3d[32].get('x'))/2, (pose_3d[31].get('y')+pose_3d[32].get('y'))/2, self.img_width, self.img_height)
+      feet = self.ask_for_position(feet_px[0], feet_px[1])
+    else:
+      torso = np.array([-(pose_3d[23].get('z')+pose_3d[24].get('z'))/2, (pose_3d[23].get('x')+pose_3d[24].get('x'))/2, -(pose_3d[23].get('y')+pose_3d[24].get('y'))/2])
+      print('torso: ', torso)
+      #l_wrist = np.array([pose_3d[15].get('x'), pose_3d[15].get('y'), pose_3d[15].get('z')-0.605]) #0.605 = neck to centre-of-waists length
+      l_shoulder = np.array([-pose_3d[11].get('z'), pose_3d[11].get('x'), -pose_3d[11].get('y')-0.605])
+      l_elbow = np.array([-pose_3d[13].get('z'), pose_3d[13].get('x'), -pose_3d[13].get('y')-0.605])
+      l_wrist = np.array([-pose_3d[15].get('z'), pose_3d[15].get('x'), -pose_3d[15].get('y')-0.605])
+      l_ankle = np.array([-pose_3d[27].get('z'), pose_3d[27].get('x'), -pose_3d[27].get('y')])
+      r_shoulder = np.array([-pose_3d[12].get('z'), pose_3d[12].get('x'), -pose_3d[12].get('y')-0.605])
+      r_elbow = np.array([-pose_3d[14].get('z'), pose_3d[14].get('x'), -pose_3d[14].get('y')-0.605])
+      r_wrist = np.array([-pose_3d[16].get('z'), pose_3d[16].get('x'), -pose_3d[16].get('y')-0.605])
+      r_ankle = np.array([-pose_3d[28].get('z'), pose_3d[28].get('x'), -pose_3d[28].get('y')])
+      nose = np.array([-pose_3d[0].get('z'), pose_3d[0].get('x'), -pose_3d[0].get('y')])
+      feet = np.array([-(pose_3d[32].get('z')+pose_3d[31].get('z'))/2, (pose_3d[32].get('x')+pose_3d[31].get('x'))/2, -(pose_3d[32].get('y')+pose_3d[31].get('y'))/2])
+
+    ### testing depth and rotation ###
+    torso_px = _normalized_to_pixel_coordinates((pose_2d[23].get('x')+pose_2d[24].get('x'))/2, (pose_2d[23].get('y')+pose_2d[24].get('y'))/2, self.img_width, self.img_height)
+    theta = np.arctan2(pose_3d[24].get('x'), -pose_3d[24].get('z'))
+    print('theta =', theta)
+    #theta = 0
+    torso_res = self.ask_for_position(torso_px[0], torso_px[1])
+    print('Torso distance: ', torso_res)
+    #####################    
+    self.tb.sendTransform((torso_res[2], -torso_res[0], 0.0), tf.transformations.quaternion_from_euler(0, 0, 1.5*np.pi+theta), rospy.Time.now(), "body_test", "camera_link")
+    self.tb.sendTransform((torso[0]+torso_res[2], torso[1]-torso_res[0], torso[2]), tf.transformations.quaternion_from_euler(0, 0, 1.5*np.pi+theta), rospy.Time.now(), "mediapipe_torso", "camera_link")
+    self.tb.sendTransform((0.0, 0.0, 0.605), tf.transformations.quaternion_from_euler(0, 0, 0), rospy.Time.now(), "our_torso", "mediapipe_torso")
+    self.tb.sendTransform((l_shoulder[0], l_shoulder[1], l_shoulder[2]), tf.transformations.quaternion_from_euler(0, 0, 0), rospy.Time.now(), "left_shoulder", "our_torso")
+    self.tb.sendTransform((r_shoulder[0], r_shoulder[1], r_shoulder[2]), tf.transformations.quaternion_from_euler(0, 0, 0), rospy.Time.now(), "right_shoulder", "our_torso")
+    self.tb.sendTransform((l_elbow[0]-l_shoulder[0], l_elbow[1]-l_shoulder[1], l_elbow[2]-l_shoulder[2]), tf.transformations.quaternion_from_euler(0, 0, 0), rospy.Time.now(), "left_elbow", "left_shoulder")
+    self.tb.sendTransform((r_elbow[0]-r_shoulder[0], r_elbow[1]-r_shoulder[1], r_elbow[2]-r_shoulder[2]), tf.transformations.quaternion_from_euler(0, 0, 0), rospy.Time.now(), "right_elbow", "right_shoulder")
+    self.tb.sendTransform((l_wrist[0]-l_elbow[0], l_wrist[1]-l_elbow[1], l_wrist[2]-l_elbow[2]), tf.transformations.quaternion_from_euler(0, 0, 0), rospy.Time.now(), "left_wrist", "left_elbow")
+    self.tb.sendTransform((r_wrist[0]-r_elbow[0], r_wrist[1]-r_elbow[1], r_wrist[2]-r_elbow[2]), tf.transformations.quaternion_from_euler(0, 0, 0), rospy.Time.now(), "right_wrist", "right_elbow")
+    self.tb.sendTransform((l_ankle[0], l_ankle[1], l_ankle[2]), tf.transformations.quaternion_from_euler(0, 0, 0), rospy.Time.now(), "left_ankle", "mediapipe_torso")
+    self.tb.sendTransform((r_ankle[0], r_ankle[1], r_ankle[2]), tf.transformations.quaternion_from_euler(0, 0, 0), rospy.Time.now(), "right_ankle", "mediapipe_torso")
+    height = np.linalg.norm(nose-feet, 2)
+    print('eight estimation: ', height)
+    #nose_px = _normalized_to_pixel_coordinates(pose_2d[0].get('x'), pose_2d[0].get('y'), self.img_width, self.img_height)
+    #nose = self.ask_for_position(nose_px[0], nose_px[1])
+    #feet_px = _normalized_to_pixel_coordinates((pose_3d[31].get('x')+pose_3d[32].get('x'))/2, (pose_3d[31].get('y')+pose_3d[32].get('y'))/2, self.img_width, self.img_height)
+    #feet = self.ask_for_position(feet_px[0], feet_px[1])
+    js.position = compute_jointstate_mediapipe(self.ik_chains[body_id], torso, l_wrist, l_ankle, r_wrist, r_ankle)
+
+    return js
+
+
+  def find_previous_match(self, bb, dict): 
+
+    for id, value in dict.items():
+        _, prev_bb, _ = value
+        rois_distance = _distance_rois(prev_bb, bb)
+        #print('ROIs distance: ', rois_distance, '\tWidth Scaling: ', prev_bb.width/bb.width, '\tHeight Scaling: ', prev_bb.height/bb.height)
+        if rois_distance < MAX_ROIS_DISTANCE * MAX_ROIS_DISTANCE \
+        and 1/MAX_SCALING_ROIS < prev_bb.width/bb.width < MAX_SCALING_ROIS \
+        and 1/MAX_SCALING_ROIS < prev_bb.height/bb.height < MAX_SCALING_ROIS:
+            return id
+
+    return None
+
+
+  def generate_face_id(self):
+
+    if DETERMINISTIC_ID:
+        id_str = "%05d" % self.last_face_id
+        self.last_face_id = (self.last_face_id + 1) % 10000
+        return id_str
+
+    else:
+        return str(uuid.uuid4())[:5] # for a 5 char long ID
+
+  def generate_body_id(self):
+
+    if DETERMINISTIC_ID:
+        id_str = "%05d" % self.last_body_id
+        self.last_body_id = (self.last_body_id + 1) % 10000
+        return id_str
+
+    else:
+        return str(uuid.uuid4())[:5] # for a 5 char long ID
+
+
+  def generate_tmp_id(self):
+    return str(uuid.uuid4())[:5] # for a 5 char long ID
+
+
+  def correct_body_bounding_box(self): #The body bounding box needs correction for the way it is initially computed. 
+
+    delta_face_y = self.y_max_face - self.y_min_face
+    delta_face_x = self.x_max_face - self.x_min_face
+    delta_face = max(delta_face_x, delta_face_y) 
+    corrected_min_x = int(self.x_min_body-(FACE_BB_MULT*delta_face))
+    corrected_min_y = int(self.y_min_body-(FACE_BB_MULT*delta_face))
+    corrected_max_x = int(self.x_max_body+(FACE_BB_MULT*delta_face))
+    corrected_max_y = int(self.y_max_body+(FACE_BB_MULT*delta_face))
+
+    return corrected_min_x, corrected_min_y, corrected_max_x, corrected_max_y
+
+
+  def detect(self, image_rgb, header):
+
+    img_height, img_width, _ = image_rgb.shape
+    self.img_height, self.img_width = img_height, img_width 
+
+    image_rgb.flags.writeable = False
+    image_rgb = cv2.cvtColor(image_rgb,cv2.COLOR_BGR2RGB) 
+    results = self.detector.process(image_rgb)
+    image_rgb.flags.writeable = True
+
+    currentFaces = {} #This structure here is specifically thought for several faces detection within the same image, which is something
+                      #we can not do with mediapipe holistic model estimation.
+    currentBodies = {} #Same concept
+
+    ### ATTENTION: code here is partially developed for just one person, partially for multi-person detection. This should be fixed in the next versions ###
+
+    ######## Face Detection Process ########
+
+    if hasattr(results.face_landmarks, 'landmark'):
+      self.x_min_face, self.y_min_face, self.x_max_face, self.y_max_face = _get_bounding_box_limits(results.face_landmarks.landmark, img_width, img_height)
+      bb = RegionOfInterest(self.x_min_face, self.y_min_face, self.x_max_face-self.x_min_face, self.y_max_face-self.y_min_face, True) 
+      id = self.find_previous_match(bb, self.detectedFaces) 
+      if id: 
+        # we re-detect a face: if it is a 2nd frame, we create a publisher for it.
+        if not self.detectedFaces[id][0]:
+          final_id = self.generate_face_id()
+          rospy.loginfo("New face [face_%s]" % final_id)
+
+          if PREALLOCATE_PUBLISHERS:
+            pub = self.face_pubs[final_id]
+          else:
+            pub = rospy.Publisher("/humans/faces/%s/roi" % final_id, RegionOfInterestStamped, queue_size=1)
+
+          currentFaces[final_id] = (pub, bb, self.detectedFaces[id][2] + 1)
+        else:
+          currentFaces[id] = (self.detectedFaces[id][0], bb, self.detectedFaces[id][2] + 1)
+      else:
+        # we 'provisionally' store the face - we'll create a publisher and start publishing only if we see the
+        # face a second time
+        id = self.generate_tmp_id()
+        currentFaces[id] = (None, bb, 1)
+        print('New face! Id:', id)
+      for id, value in self.detectedFaces.items():
+        if id not in currentFaces:
+          pub, _, nb_frames = value
+          if pub:
+            rospy.loginfo("Face [face_%s] lost. It remained visible for %s frames" % (id, nb_frames))
+            pub.unregister()
+
+      self.detectedFaces = currentFaces
+
+      list_ids = []
+
+      for id, value in self.detectedFaces.items():
+        pub, bb, _ = value
+        if pub:
+          list_ids.append(str(id))
+          pub.publish(RegionOfInterestStamped(header, bb))
+
+      self.faces_pub.publish(IdsList(header, list_ids))
+
+      if TEXTUAL_DEBUG:
+        print('FACE: bb limits ==> x_min =', self.x_min_face, 'y_min = ', self.y_min_face, 'x_max = ', self.x_max_face, 'y_max = ', self.y_max_face)        
+      if VISUAL_DEBUG:
+        image_rgb = cv2.rectangle(image_rgb, (max(self.x_min_face, 0), max(self.y_min_face, 0)), (min(self.x_max_face, img_width-1), min(self.y_max_face, img_height-1)), (0, 0, 255), 3)
+
+    ########################################
+
+    ######## Introducing Hand Landmarks ########
+
+    if hasattr(results.left_hand_landmarks, 'landmark'):
+      pose_keypoints = protobuf_to_dict(results.pose_landmarks)
+      pose_kpt = pose_keypoints.get('landmark')
+      landmarks = [None] * 21
+      for i in range(0, 21):
+        landmarks[i]  = PointOfInterest2D(pose_kpt[i].get('x'), pose_kpt[i].get('y'), pose_kpt[i].get('visibility'))
+      self.x_min_hand_left, self.y_min_hand_left, self.x_max_hand_left, self.y_max_hand_left = _get_bounding_box_limits(landmarks, img_width, img_height)
+
+    if hasattr(results.right_hand_landmarks, 'landmark'):
+      pose_keypoints = protobuf_to_dict(results.pose_landmarks)
+      pose_kpt = pose_keypoints.get('landmark')
+      landmarks = [None] * 21
+      for i in range(0, 21):
+        landmarks[i]  = PointOfInterest2D(pose_kpt[i].get('x'), pose_kpt[i].get('y'), pose_kpt[i].get('visibility'))
+      self.x_min_hand_right, self.y_min_hand_right, self.x_max_hand_right, self.y_max_hand_right = _get_bounding_box_limits(landmarks, img_width, img_height)
+    
+    ############################################
+
+    ######## Body Detection Process ########    
+
+    if hasattr(results.pose_landmarks, 'landmark'):
+      pose_keypoints = protobuf_to_dict(results.pose_landmarks)
+      pose_world_keypoints = protobuf_to_dict(results.pose_world_landmarks)
+      #mp_drawing.plot_landmarks(results.pose_world_landmarks, mp_pose.POSE_CONNECTIONS)
+      pose_kpt = pose_keypoints.get('landmark')
+      pose_world_kpt = pose_world_keypoints.get('landmark')
+      skel_msg = _make_2d_skeleton_msg(header, pose_kpt)
+      if self.from_depth_image:
+        js = self.make_jointstate(self.body_id, self.image_for_jointstate, pose_kpt)
+      else:
+        js = self.make_jointstate(self.body_id, self.image_for_jointstate, pose_world_kpt, pose_kpt)
+      self.js_pub.publish(js)
+      self.skel_pub.publish(skel_msg)
+      self.x_min_body, self.y_min_body, self.x_max_body, self.y_max_body = _get_bounding_box_limits(skel_msg.skeleton, img_width, img_height)
+      self.skeleton = skel_msg.skeleton
+      if hasattr(results.right_hand_landmarks, 'landmark') and hasattr(results.face_landmarks, 'landmark') and hasattr(results.left_hand_landmarks, 'landmark'):
+        self.x_min_body = min(self.x_min_body, self.x_min_face, self.x_min_hand_left, self.x_min_hand_right)
+        self.y_min_body = min(self.y_min_body, self.y_min_face, self.y_min_hand_left, self.y_min_hand_right)
+        self.x_max_body = max(self.x_max_body, self.x_max_face, self.x_max_hand_left, self.x_max_hand_right)
+        self.y_max_body = max(self.y_max_body, self.y_max_face, self.y_max_hand_left, self.y_max_hand_right)
+      elif hasattr(results.face_landmarks, 'landmark'):
+        self.x_min_body = min(self.x_min_body, self.x_min_face)
+        self.y_min_body = min(self.y_min_body, self.y_min_face)
+        self.x_max_body = max(self.x_max_body, self.x_max_face)
+        self.y_max_body = max(self.y_max_body, self.y_max_face)
+
+      if hasattr(results.right_hand_landmarks, 'landmark'):
+        self.x_min_body, self.y_min_body, self.x_max_body, self.y_max_body = self.correct_body_bounding_box()
+
+      bb = RegionOfInterest(self.x_min_body, self.y_min_body, self.x_max_body-self.x_min_body, self.y_max_body-self.y_min_body, True) 
+      id = self.find_previous_match(bb, self.detectedBodies) 
+      if id: 
+        # we re-detect a face: if it is a 2nd frame, we create a publisher for it.
+        if not self.detectedBodies[id][0]:
+          final_id = self.generate_body_id()
+          rospy.loginfo("New body [body_%s]" % final_id)
+
+          if PREALLOCATE_PUBLISHERS:
+            pub = self.body_pubs[final_id]
+          else:
+            pub = rospy.Publisher("/humans/bodies/%s/roi" % final_id, RegionOfInterestStamped, queue_size=1)
+
+          currentBodies[final_id] = (pub, bb, self.detectedBodies[id][2] + 1) ######### LEFT HERE!
+        else:
+          currentBodies[id] = (self.detectedBodies[id][0], bb, self.detectedBodies[id][2] + 1)
+      else:
+        # we 'provisionally' store the face - we'll create a publisher and start publishing only if we see the
+        # face a second time
+        id = self.generate_tmp_id()
+        currentBodies[id] = (None, bb, 1)
+        print('New body! Id:', id)
+      for id, value in self.detectedBodies.items():
+        if id not in currentBodies:
+          pub, _, nb_frames = value
+          if pub:
+            rospy.loginfo("Body [body_%s] lost. It remained visible for %s frames" % (id, nb_frames))
+            pub.unregister()
+
+      self.detectedBodies = currentBodies
+
+      list_ids = []
+
+      for id, value in self.detectedBodies.items():
+        pub, bb, _ = value
+        if pub:
+          list_ids.append(str(id))
+          pub.publish(RegionOfInterestStamped(header, bb))
+
+      self.bodies_pub.publish(IdsList(header, list_ids))
+
+      if TEXTUAL_DEBUG:
+        print('BODY: bb limits ==> x_min =', self.x_min_body, 'y_min = ', self.y_min_body, 'x_max = ', self.x_max_body, 'y_max = ', self.y_max_body)
+      if VISUAL_DEBUG:
+        image_rgb = cv2.rectangle(image_rgb, (max(self.x_min_body, 0), max(self.y_min_body, 0)), \
+          (min(self.x_max_body, img_width-1), min(self.y_max_body, img_height-1)), \
+          (255, 0, 0), 3)
+
+    ########################################
+
+    if VISUAL_DEBUG:  
+      self.visual_pub.publish(CvBridge.cv2_to_imgmsg(self.br, image_rgb, "rgb8"))
+
+
+  def image_callback(self, data):
+
+    br = CvBridge()
+    image_rgb = br.compressed_imgmsg_to_cv2(data)
+    self.image_for_jointstate = data
+    header = copy.copy(data.header)
+    self.detect(image_rgb, header)
+
+  def init_node(self, camera_topic):
+
+    rospy.Subscriber(camera_topic, CompressedImage, self.image_callback, queue_size=1, buff_size = 2**24)
+
+
+if __name__ == '__main__':
+  rospy.init_node('holistic_estimation', anonymous=True)
+  if rospy.has_param('~rgbImageTopic'):
+    print('********** Found rgb image topic parameter: ', rospy.get_param('~rgbImageTopic'), ' *****************')
+  imageTopic = rospy.get_param('~rgbImageTopic')
+  dtct = HolisticDetector()
+  dtct.init_node(imageTopic)
+  rospy.spin()
+  cv2.destroyAllWindows()
+
+
+
+
+
