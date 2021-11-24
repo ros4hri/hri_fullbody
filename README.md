@@ -24,6 +24,6 @@ There is one simple .launch file that needs to be run to get everything from thi
 
 ### Video Example
 Here an example of the expected result for the human model visualization on RViz:
-![Human Model Visualization](human_model_visualization.webm)
+![Human Model Visualization](doc/human_model_visualization.webm)
 
 

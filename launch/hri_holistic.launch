@@ -1,12 +1,20 @@
 <launch>
-	<node name="rs_to_depth_hri" pkg="hri_holistic" type="rs_to_depth" output="screen">
-		<param name="depthImageTopic" value="$(env DEPTH_IMAGE_TOPIC)"/>
-		<param name="rgbCameraInfoTopic" value="$(env RGB_CAMERA_INFO_TOPIC)"/>
-		<param name="depthCameraInfoTopic" value="$(env DEPTH_CAMERA_INFO_TOPIC)"/>
-		<param name="rgbImageTopic" value="$(env RGB_IMAGE_TOPIC)"/>
+
+	<arg name="rgb_camera_topic" default="/camera/color/image_raw/compressed"/>
+	<arg name="depth_camera_topic" default="/camera/depth/image_rect_raw"/>
+	<arg name="rgb_camera_info" default="/camera/color/camera_info"/>
+	<arg name="depth_camera_info" default="/camera/depth/camera_info"/>
+	<arg name="use_depth" default="False"/>
+	<arg name="visual_debug" default="False"/>
+
+	<remap from="/rgb_image" to="$(arg rgb_camera_topic)"/>
+	<remap from="/depth_image" to="$(arg depth_camera_topic)"/>
+	<remap from="/rgb_info" to="$(arg rgb_camera_info)"/>
+	<remap from="/depth_info" to="$(arg depth_camera_info)"/>
+
+	<node name="hri_holistic" pkg="hri_holistic" type="detect" output="screen">
+		<param name="use_depth" value="$(arg use_depth)"/>
+		<param name="visual_debug" value="$(arg visual_debug)"/>
 	</node>
-	<node name="hri_holistic" pkg="hri_holistic" type="holistic" output="screen">
-		<param name="rgbImageTopic" value="$(env RGB_IMAGE_TOPIC)"/>
-	</node>
-	<node type="rviz" name="rviz" pkg="rviz" args="-d $(find hri_holistic)/rviz/holistic_urdf_visualization.rviz" />
+	<node type="rviz" name="rviz" pkg="rviz" args="-d $(find hri_holistic)/rviz/holistic_urdf_visualization.rviz"/>
 </launch>
