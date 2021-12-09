@@ -22,8 +22,7 @@ import rospy
 import rosparam
 import tf
 from message_filters import ApproximateTimeSynchronizer, Subscriber
-from sensor_msgs.msg import Image, \
-    CompressedImage, CameraInfo, RegionOfInterest
+from sensor_msgs.msg import Image, CameraInfo, RegionOfInterest
 from sensor_msgs.msg import JointState
 from hri_msgs.msg import Skeleton2D, PointOfInterest2D, \
     IdsList, RegionOfInterestStamped
@@ -1030,7 +1029,7 @@ class FullbodyDetector:
     def image_callback(self, depth_info, rgb_info, depth_img, rgb_img):
 
         br = CvBridge()
-        image_rgb = br.compressed_imgmsg_to_cv2(rgb_img)
+        image_rgb = br.imgmsg_to_cv2(rgb_img)
         # Realsense depth encoding: 16UC1
         image_depth = self.br.imgmsg_to_cv2(depth_img, "16UC1")
         self.image_depth = image_depth
@@ -1046,7 +1045,7 @@ class FullbodyDetector:
     def image_callback_rgb_only(self, rgb_info, rgb_img):
 
         br = CvBridge()
-        image_rgb = br.compressed_imgmsg_to_cv2(rgb_img)
+        image_rgb = br.imgmsg_to_cv2(rgb_img)
         self.image_for_jointstate = rgb_img
         header = copy.copy(rgb_img.header)
         self.rgb_info = rgb_info
@@ -1074,7 +1073,7 @@ class FullbodyDetector:
                         buff_size=2**24),
                     Subscriber(
                         "/rgb_image",
-                        CompressedImage,
+                        Image,
                         queue_size=1,
                         buff_size=2**24)
                 ],
@@ -1092,7 +1091,7 @@ class FullbodyDetector:
                         buff_size=2**24),
                     Subscriber(
                         "/rgb_image",
-                        CompressedImage,
+                        Image,
                         queue_size=1,
                         buff_size=2**24)
                 ],
