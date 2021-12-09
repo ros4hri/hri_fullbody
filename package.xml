@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
-<package format="2">
-  <name>hri_holistic</name>
+<package format="3">
+  <name>hri_fullbody</name>
   <version>0.1.0</version>
-  <description>The ROS4HRI package --- holistic module</description>
+  <description>ROS node implementing 2D/3D full-body pose estimation, using Google Mediapipe. Part of ROS4HRI.</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
