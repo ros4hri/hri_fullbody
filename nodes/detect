@@ -8,7 +8,7 @@ from hri_fullbody.jointstate import compute_jointstate, \
     HUMAN_JOINT_NAMES, compute_jointstate
 from hri_fullbody.rs_to_depth import rgb_to_xyz  # SITW
 from hri_fullbody.urdf_generator import make_urdf_human
-from protobuf_to_dict import protobuf_to_dict
+from hri_fullbody.protobuf_to_dict import protobuf_to_dict
 import math
 import uuid
 import numpy as np
