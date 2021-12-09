@@ -1,20 +1,27 @@
 <launch>
 
-	<arg name="rgb_camera_topic" default="/camera/color/image_raw/compressed"/>
-	<arg name="depth_camera_topic" default="/camera/depth/image_rect_raw"/>
-	<arg name="rgb_camera_info" default="/camera/color/camera_info"/>
-	<arg name="depth_camera_info" default="/camera/depth/camera_info"/>
-	<arg name="use_depth" default="False"/>
-	<arg name="visual_debug" default="False"/>
+    <arg name="rgb_camera_topic" default="/camera/color/image_raw"/>
+    <arg name="depth_camera_topic" default="/camera/depth/image_rect_raw"/>
+    <arg name="rgb_camera_info" default="/camera/color/camera_info"/>
+    <arg name="depth_camera_info" default="/camera/depth/camera_info"/>
+    <arg name="use_depth" default="False"/>
+    <arg name="visual_debug" default="False"/>
 
-	<remap from="/rgb_image" to="$(arg rgb_camera_topic)"/>
-	<remap from="/depth_image" to="$(arg depth_camera_topic)"/>
-	<remap from="/rgb_info" to="$(arg rgb_camera_info)"/>
-	<remap from="/depth_info" to="$(arg depth_camera_info)"/>
+    <node name="usb_cam" pkg="usb_cam" type="usb_cam_node">
+        <remap from="/usb_cam/image_raw" to="$(arg rgb_camera_topic)"/>
+        <remap from="/usb_cam/camera_info" to="$(arg rgb_camera_info)"/>
+    </node>
 
-	<node name="hri_fullbody" pkg="hri_fullbody" type="detect" output="screen">
-		<param name="use_depth" value="$(arg use_depth)"/>
-		<param name="visual_debug" value="$(arg visual_debug)"/>
-	</node>
-	<node type="rviz" name="rviz" pkg="rviz" args="-d $(find hri_fullbody)/rviz/fullbody_urdf_visualization.rviz"/>
+    <node name="hri_fullbody" pkg="hri_fullbody" type="detect" output="screen">
+        <param name="use_depth" value="$(arg use_depth)"/>
+        <param name="visual_debug" value="$(arg visual_debug)"/>
+
+        <remap from="/rgb_image" to="$(arg rgb_camera_topic)"/>
+        <remap from="/rgb_info" to="$(arg rgb_camera_info)"/>
+        <remap from="/depth_image" to="$(arg depth_camera_topic)"/>
+        <remap from="/depth_info" to="$(arg depth_camera_info)"/>
+    </node>
+
+    <node type="rviz" name="rviz" pkg="rviz" args="-d $(find hri_fullbody)/rviz/fullbody_urdf_visualization.rviz"/>
+
 </launch>
