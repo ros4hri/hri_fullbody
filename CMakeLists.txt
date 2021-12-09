@@ -20,6 +20,7 @@ catkin_install_python(PROGRAMS nodes/detect
 install(DIRECTORY
   urdf
   launch
+  rviz
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
