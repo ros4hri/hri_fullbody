@@ -12,9 +12,9 @@
 	<remap from="/rgb_info" to="$(arg rgb_camera_info)"/>
 	<remap from="/depth_info" to="$(arg depth_camera_info)"/>
 
-	<node name="hri_holistic" pkg="hri_holistic" type="detect" output="screen">
+	<node name="hri_fullbody" pkg="hri_fullbody" type="detect" output="screen">
 		<param name="use_depth" value="$(arg use_depth)"/>
 		<param name="visual_debug" value="$(arg visual_debug)"/>
 	</node>
-	<node type="rviz" name="rviz" pkg="rviz" args="-d $(find hri_holistic)/rviz/holistic_urdf_visualization.rviz"/>
+	<node type="rviz" name="rviz" pkg="rviz" args="-d $(find hri_fullbody)/rviz/fullbody_urdf_visualization.rviz"/>
 </launch>

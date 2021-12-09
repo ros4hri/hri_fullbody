@@ -4,11 +4,10 @@ from mpl_toolkits.mplot3d import Axes3D, axes3d
 import matplotlib.pyplot as plt
 import io
 from ikpy import chain
-from hri_holistic.srv import SpecificPointXYZ
-from hri_holistic.jointstate import compute_jointstate, \
+from hri_fullbody.jointstate import compute_jointstate, \
     HUMAN_JOINT_NAMES, compute_jointstate
-from hri_holistic.rs_to_depth import rgb_to_xyz  # SITW
-from hri_holistic.urdf_generator import make_urdf_human
+from hri_fullbody.rs_to_depth import rgb_to_xyz  # SITW
+from hri_fullbody.urdf_generator import make_urdf_human
 from protobuf_to_dict import protobuf_to_dict
 import math
 import uuid
@@ -187,7 +186,7 @@ def _distance_rois(bb1, bb2):
     return (x1-x2) * (x1-x2) + (y1-y2) * (y1-y2)
 
 
-class HolisticDetector:
+class FullbodyDetector:
 
     def __init__(self, use_depth, visual_debug):
 
@@ -214,9 +213,9 @@ class HolisticDetector:
         self.detectedBodies = {}
 
         self.visual_pub = rospy.Publisher(
-            '/holistic/visual', Image, queue_size=1)
+            '/fullbody/visual', Image, queue_size=1)
         self.skel_pub = rospy.Publisher(
-            '/holistic/skeleton', Skeleton2D, queue_size=1)
+            '/fullbody/skeleton', Skeleton2D, queue_size=1)
         self.js_pub = rospy.Publisher(
             '/test_joint_states', JointState, queue_size=1)
 
@@ -1104,10 +1103,10 @@ class HolisticDetector:
 
 
 if __name__ == '__main__':
-    rospy.init_node('holistic_estimation', anonymous=True)
+    rospy.init_node('fullbody_estimation', anonymous=True)
     use_depth = rospy.get_param('~use_depth')
     visual_debug = rospy.get_param('~visual_debug')
-    dtct = HolisticDetector(use_depth, visual_debug)
+    dtct = FullbodyDetector(use_depth, visual_debug)
     dtct.init_node()
     rospy.spin()
     cv2.destroyAllWindows()
