@@ -6,15 +6,19 @@
     <arg name="depth_camera_info" default="/camera/depth/camera_info"/>
     <arg name="use_depth" default="False"/>
     <arg name="visual_debug" default="False"/>
+    <arg name="textual_debug" default="False"/>
+    <arg name="stickman_debug" default="False"/>
 
     <node name="usb_cam" pkg="usb_cam" type="usb_cam_node">
         <remap from="/usb_cam/image_raw" to="$(arg rgb_camera_topic)"/>
         <remap from="/usb_cam/camera_info" to="$(arg rgb_camera_info)"/>
     </node>
 
-    <node name="hri_fullbody" pkg="hri_fullbody" type="detect" output="screen">
+    <node name="hri_fullbody" pkg="hri_fullbody" type="detect_without_test" output="screen">
         <param name="use_depth" value="$(arg use_depth)"/>
         <param name="visual_debug" value="$(arg visual_debug)"/>
+        <param name="textual_debug" value="$(arg textual_debug)"/>
+        <param name="stickman_debug" value="$(arg stickman_debug)"/>
 
         <remap from="/rgb_image" to="$(arg rgb_camera_topic)"/>
         <remap from="/rgb_info" to="$(arg rgb_camera_info)"/>
