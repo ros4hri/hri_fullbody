@@ -14,7 +14,7 @@
         <remap from="/usb_cam/camera_info" to="$(arg rgb_camera_info)"/>
     </node>
 
-    <node name="hri_fullbody" pkg="hri_fullbody" type="detect_without_test" output="screen">
+    <node name="hri_fullbody" pkg="hri_fullbody" type="detect" output="screen">
         <param name="use_depth" value="$(arg use_depth)"/>
         <param name="visual_debug" value="$(arg visual_debug)"/>
         <param name="textual_debug" value="$(arg textual_debug)"/>
