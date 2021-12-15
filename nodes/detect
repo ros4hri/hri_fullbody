@@ -38,8 +38,6 @@ mp_holistic = mp.solutions.holistic
 mp_pose = mp.solutions.pose
 
 
-TEXTUAL_DEBUG = False
-
 # if set to true, face IDs will be generated as a sequence of integers,
 # starting at 00001.
 # Otherwise, face IDs will be a random set of 5 characters in [0-9a-f]
@@ -59,9 +57,6 @@ MAX_SCALING_ROIS = 1.2
 # Parameter definition for the bounding box resizer
 BB_MULT = 0.0
 FACE_BB_MULT = 0.5
-
-USE_DEPTH = False
-STICKMAN_DEBUG = False
 
 # Mediapipe 2D keypoint order:
 # ['nose', 'left_eye_inner', 'left_eye', 'left_eye_outer',
@@ -187,10 +182,12 @@ def _distance_rois(bb1, bb2):
 
 class FullbodyDetector:
 
-    def __init__(self, use_depth, visual_debug):
+    def __init__(self, use_depth, visual_debug, textual_debug, stickman_debug):
 
         self.use_depth = use_depth
         self.visual_debug = visual_debug
+        self.textual_debug = textual_debug
+        self.stickman_debug = stickman_debug
 
         self.detector = mp_holistic.Holistic(
             min_detection_confidence=0.5, min_tracking_confidence=0.5)
@@ -480,11 +477,11 @@ class FullbodyDetector:
                 1.5*np.pi+theta
             ),
             header.stamp,
-            "body_test",
+            "body_%s" % body_id,
             "camera_link"
         )
 
-        if STICKMAN_DEBUG:
+        if self.stickman_debug:
             self.tb.sendTransform(
                 (torso[0]+torso_res[2], torso[1]-torso_res[0], torso[2]),
                 tf.transformations.quaternion_from_euler(
@@ -662,21 +659,21 @@ class FullbodyDetector:
             max_scaling_rois):
 
         for id, value in dict.items():
-            _, prev_bb, _ = value
+            prev_bb = value[1]
             rois_distance = _distance_rois(prev_bb, bb)
             if (rois_distance
                     < max_rois_distance * max_rois_distance
                     and (
                         1/max_scaling_rois
                         < prev_bb.width/bb.width
-                                < max_scaling_rois
-                        )
+                        < max_scaling_rois
+                    )
                     and (
                         1/max_scaling_rois
                         < prev_bb.height/bb.height
-                                < max_scaling_rois
-                        )
-                    ):
+                        < max_scaling_rois
+                    )
+                ):
                 return id
 
         return None
@@ -757,10 +754,10 @@ class FullbodyDetector:
                 True
             )
             id = self.find_previous_match(
-                    bb, 
-                    self.detectedFaces, 
-                    MAX_ROIS_DISTANCE, 
-                    MAX_SCALING_ROIS)
+                bb,
+                self.detectedFaces,
+                MAX_ROIS_DISTANCE,
+                MAX_SCALING_ROIS)
             if id:
                 # we re-detect a face: if it is a 2nd frame,
                 # we create a publisher for it.
@@ -813,7 +810,7 @@ class FullbodyDetector:
 
             self.faces_pub.publish(IdsList(header, list_ids))
 
-            if TEXTUAL_DEBUG:
+            if self.textual_debug:
                 print('FACE: bb limits ==> x_min =', self.x_min_face,
                       'y_min = ', self.y_min_face,
                       'x_max = ', self.x_max_face,
@@ -876,7 +873,6 @@ class FullbodyDetector:
             pose_keypoints = protobuf_to_dict(results.pose_landmarks)
             pose_world_keypoints = protobuf_to_dict(
                 results.pose_world_landmarks)
-            #mp_drawing.plot_landmarks(results.pose_world_landmarks, mp_pose.POSE_CONNECTIONS)
             pose_kpt = pose_keypoints.get('landmark')
             pose_world_kpt = pose_world_keypoints.get('landmark')
             skel_msg = _make_2d_skeleton_msg(header, pose_kpt)
@@ -945,12 +941,12 @@ class FullbodyDetector:
                 True
             )
             id = self.find_previous_match(
-                    bb, 
-                    self.detectedBodies,
-                    MAX_ROIS_DISTANCE*2,
-                    MAX_SCALING_ROIS*2)
+                bb,
+                self.detectedBodies,
+                MAX_ROIS_DISTANCE*2,
+                MAX_SCALING_ROIS*2)
             if id:
-                # we re-detect a face: if it is a 2nd frame,
+                # we re-detect a body: if it is a 2nd frame,
                 # we create a publisher for it.
                 if not self.detectedBodies[id][0]:
                     final_id = self.generate_body_id()
@@ -965,44 +961,155 @@ class FullbodyDetector:
                             queue_size=1
                         )
 
+                    urdf = make_urdf_human(final_id)
+                    rospy.loginfo("Setting URDF description for body"
+                                  "<%s> (param name: human_description_%s)" % (
+                                      final_id, final_id))
+
+                    human_description = "human_description_%s" % final_id
+                    rosparam.set_param_raw(human_description, urdf)
+
+                    urdf_file = io.StringIO(urdf)
+                    r_arm_chain = chain.Chain.from_urdf_file(
+                        urdf_file,
+                        base_elements=[
+                            "r_y_shoulder_%s" % final_id],
+                        base_element_type="joint",
+                        active_links_mask=[False,
+                                           True,
+                                           True,
+                                           True,
+                                           True,
+                                           False])
+                    urdf_file.seek(0)
+                    l_arm_chain = chain.Chain.from_urdf_file(
+                        urdf_file,
+                        base_elements=[
+                            "l_y_shoulder_%s" % final_id],
+                        base_element_type="joint",
+                        active_links_mask=[False,
+                                           True,
+                                           True,
+                                           True,
+                                           True,
+                                           False])
+                    urdf_file.seek(0)
+                    r_leg_chain = chain.Chain.from_urdf_file(
+                        urdf_file,
+                        base_elements=[
+                            "r_y_hip_%s" % final_id],
+                        base_element_type="joint",
+                        active_links_mask=[False,
+                                           True,
+                                           True,
+                                           True,
+                                           False])
+                    urdf_file.seek(0)
+                    l_leg_chain = chain.Chain.from_urdf_file(
+                        urdf_file,
+                        base_elements=[
+                            "l_y_hip_%s" % final_id],
+                        base_element_type="joint",
+                        active_links_mask=[False,
+                                           True,
+                                           True,
+                                           True,
+                                           False])
+
+                    self.ik_chains[final_id] = [
+                        r_arm_chain,
+                        l_arm_chain,
+                        r_leg_chain,
+                        l_leg_chain
+                    ]
+
+                    # 2. spawn a new robot_state_publisher process,
+                    #    which will publish the
+                    #    TF frames for this body
+                    rospy.loginfo(
+                        "Spawning a instance of robot_state_publisher \
+                         for this body...")
+                    cmd = ["rosrun",
+                           "robot_state_publisher",
+                           "robot_state_publisher",
+                           "__name:=robot_state_publisher_body_%s" % final_id,
+                           "joint_states:=%s" % ("joint_states_%s" % final_id),
+                           "robot_description:=%s" % human_description,
+                           "_publish_frequency:=25",
+                           "_use_tf_static:=false"
+                           ]
+                    rospy.loginfo("Executing: %s" % " ".join(cmd))
+                    proc = subprocess.Popen(cmd,
+                                            stdout=sys.stdout,
+                                            stderr=subprocess.STDOUT)
+                    self.robot_state_publishers = {}
+                    self.robot_state_publishers[final_id] = proc
+
+                    js_pub = rospy.Publisher(
+                        '/joint_states_%s' % final_id,
+                        JointState,
+                        queue_size=1)
+
                     currentBodies[final_id] = (
-                        pub, bb, self.detectedBodies[id][2] + 1)  # LEFT HERE!
+                        pub, bb, self.detectedBodies[id][2] + 1, js_pub)
+
+                    js = self.make_jointstate(final_id,
+                                              self.image_for_jointstate,
+                                              pose_world_kpt,
+                                              pose_kpt,
+                                              header)
+
+                    js_pub.publish(js)
+
                 else:
                     currentBodies[id] = (
                         self.detectedBodies[id][0],
                         bb,
-                        self.detectedBodies[id][2] + 1
+                        self.detectedBodies[id][2] + 1,
+                        self.detectedBodies[id][3]
                     )
+
+                    js = self.make_jointstate(id,
+                                              self.image_for_jointstate,
+                                              pose_world_kpt,
+                                              pose_kpt,
+                                              header)
+
+                    currentBodies[id][3].publish(js)
+
             else:
                 # we 'provisionally' store the face - we'll create a
                 # publisher and start publishing only if we see the
                 # face a second time
                 id = self.generate_tmp_id()
-                currentBodies[id] = (None, bb, 1)
+                currentBodies[id] = (None, bb, 1, None)
                 print('New body! Id:', id)
+
             for id, value in self.detectedBodies.items():
                 if id not in currentBodies:
-                    pub, _, nb_frames = value
+                    pub, _, nb_frames, js_pub = value
                     if pub:
                         rospy.loginfo(
                             "Body [body_%s] lost. "
                             "It remained visible for %s frames"
                             % (id, nb_frames))
                         pub.unregister()
+                        js_pub.unregister()
+                        self.robot_state_publishers[id].terminate()
 
             self.detectedBodies = currentBodies
 
             list_ids = []
 
             for id, value in self.detectedBodies.items():
-                pub, bb, _ = value
+                pub, bb, _, _ = value
                 if pub:
                     list_ids.append(str(id))
                     pub.publish(RegionOfInterestStamped(header, bb))
 
             self.bodies_pub.publish(IdsList(header, list_ids))
 
-            if TEXTUAL_DEBUG:
+            if self.textual_debug:
                 print(
                     'BODY: bb limits ==> x_min =', self.x_min_body,
                     'y_min = ', self.y_min_body,
@@ -1105,7 +1212,12 @@ if __name__ == '__main__':
     rospy.init_node('fullbody_estimation', anonymous=True)
     use_depth = rospy.get_param('~use_depth')
     visual_debug = rospy.get_param('~visual_debug')
-    dtct = FullbodyDetector(use_depth, visual_debug)
+    textual_debug = rospy.get_param('~textual_debug')
+    stickman_debug = rospy.get_param('~stickman_debug')
+    dtct = FullbodyDetector(use_depth,
+                            visual_debug,
+                            textual_debug,
+                            stickman_debug)
     dtct.init_node()
     rospy.spin()
     cv2.destroyAllWindows()
