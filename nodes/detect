@@ -269,10 +269,10 @@ class FullbodyDetector:
         ]
 
         # 2. create the publishers for the 2D skeleton and joint state
-        #prefix = TOPIC_PREFIX + "%s/" % self.body_id
+        # prefix = TOPIC_PREFIX + "%s/" % self.body_id
         # self.publishers[body_id] = [
-        #rospy.Publisher(prefix + "skeleton2d", Skeleton2D, queue_size=1),
-        #rospy.Publisher(prefix + "joint_states", JointState, queue_size=1)
+        # rospy.Publisher(prefix + "skeleton2d", Skeleton2D, queue_size=1),
+        # rospy.Publisher(prefix + "joint_states", JointState, queue_size=1)
         # ] ==> At this point, as I am only testing the human model,
         # I am using my own defined publishers
 
@@ -313,7 +313,10 @@ class FullbodyDetector:
 
         self.tb = tf.TransformBroadcaster()
 
-    def make_jointstate(
+    def make_jointstate
+
+
+(
             self,
             body_id,
             original_image,
@@ -644,10 +647,11 @@ class FullbodyDetector:
                 self.depth_info,
                 self.image_depth)
 
+            ### [WiP] Height Estimation [WiP] ###
             if pose_2d[0].get('visibility') > 0.85 and \
                     pose_2d[31].get('visibility') > 0.85:
-                #print('3d estimated height: ', left_foot_3d[1] - nose_3d[1])
                 estimated_height = left_foot_3d[1] - nose_3d[1]
+                ### Work in Progress! ###
 
         return js
 
@@ -715,6 +719,14 @@ class FullbodyDetector:
 
         return corrected_min_x, corrected_min_y, corrected_max_x, corrected_max_y
 
+    def check_bounding_box_consistency(self, bb):
+        return bb.x_offset >= 0 \
+                and bb.y_offset >= 0 \
+                and bb.width > 0 \
+                and bb.height > 0 \
+                and (bb.x_offset + bb.width < self.img_width) \
+                and (bb.y_offset + bb.height < self.img_height)
+
     def detect(self, image_rgb, header):
 
         img_height, img_width, _ = image_rgb.shape
@@ -727,7 +739,7 @@ class FullbodyDetector:
 
         currentFaces = {}  # This structure here is specifically thought
         # for several faces detection within the same image,
-        #which is something
+        # which is something
         # we can not do with mediapipe holistic model estimation.
         currentBodies = {}  # Same concept
 
@@ -787,7 +799,6 @@ class FullbodyDetector:
                 # face a second time
                 id = self.generate_tmp_id()
                 currentFaces[id] = (None, bb, 1)
-                print('New face! Id:', id)
             for id, value in self.detectedFaces.items():
                 if id not in currentFaces:
                     pub, _, nb_frames = value
@@ -806,7 +817,8 @@ class FullbodyDetector:
                 pub, bb, _ = value
                 if pub:
                     list_ids.append(str(id))
-                    pub.publish(RegionOfInterestStamped(header, bb))
+                    if self.check_bounding_box_consistency(bb):
+                        pub.publish(RegionOfInterestStamped(header, bb))
 
             self.faces_pub.publish(IdsList(header, list_ids))
 
@@ -1083,7 +1095,6 @@ class FullbodyDetector:
                 # face a second time
                 id = self.generate_tmp_id()
                 currentBodies[id] = (None, bb, 1, None)
-                print('New body! Id:', id)
 
             for id, value in self.detectedBodies.items():
                 if id not in currentBodies:

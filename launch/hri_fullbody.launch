@@ -26,6 +26,6 @@
         <remap from="/depth_info" to="$(arg depth_camera_info)"/>
     </node>
 
-    <node type="rviz" name="rviz" pkg="rviz" args="-d $(find hri_fullbody)/rviz/fullbody_urdf_visualization.rviz"/>
+    <node type="rviz" name="rviz" pkg="rviz" args="-d $(find hri_fullbody)/rviz/fullbody_urdf_visualization.rviz" output="screen"/>
 
 </launch>
