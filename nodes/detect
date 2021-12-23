@@ -32,8 +32,6 @@ from cv_bridge import CvBridge
 import cv2
 
 import mediapipe as mp
-mp_drawing = mp.solutions.drawing_utils
-mp_drawing_styles = mp.solutions.drawing_styles
 mp_holistic = mp.solutions.holistic
 mp_pose = mp.solutions.pose
 
@@ -268,15 +266,7 @@ class FullbodyDetector:
             self.l_leg_chain
         ]
 
-        # 2. create the publishers for the 2D skeleton and joint state
-        # prefix = TOPIC_PREFIX + "%s/" % self.body_id
-        # self.publishers[body_id] = [
-        # rospy.Publisher(prefix + "skeleton2d", Skeleton2D, queue_size=1),
-        # rospy.Publisher(prefix + "joint_states", JointState, queue_size=1)
-        # ] ==> At this point, as I am only testing the human model,
-        # I am using my own defined publishers
-
-        # 3. spawn a new robot_state_publisher process, which will publish the
+        # 2. spawn a new robot_state_publisher process, which will publish the
         #    TF frames for this body
         rospy.loginfo(
             "Spawning a instance of robot_state_publisher for this body...")
@@ -313,19 +303,15 @@ class FullbodyDetector:
 
         self.tb = tf.TransformBroadcaster()
 
-    def make_jointstate
-
-
-(
+    def make_jointstate(
             self,
             body_id,
-            original_image,
             pose_3d,
             pose_2d,
             header):
 
         js = JointState()
-        js.header = copy.copy(original_image.header)
+        js.header = copy.copy(header)
         js.name = [jn + "_%s" % body_id for jn in HUMAN_JOINT_NAMES]
 
         if self.from_depth_image:
@@ -472,6 +458,7 @@ class FullbodyDetector:
             torso_res = np.array([0, 0, 0])
 
         ### Publishing tf transformations ###
+
         self.tb.sendTransform(
             (torso_res[2], -torso_res[0], 0.0),
             tf.transformations.quaternion_from_euler(
@@ -666,18 +653,18 @@ class FullbodyDetector:
             prev_bb = value[1]
             rois_distance = _distance_rois(prev_bb, bb)
             if (rois_distance
-                    < max_rois_distance * max_rois_distance
-                    and (
-                        1/max_scaling_rois
-                        < prev_bb.width/bb.width
-                        < max_scaling_rois
-                    )
-                    and (
-                        1/max_scaling_rois
-                        < prev_bb.height/bb.height
-                        < max_scaling_rois
-                    )
-                ):
+                        < max_rois_distance * max_rois_distance
+                        and (
+                            1/max_scaling_rois
+                            < prev_bb.width/bb.width
+                            < max_scaling_rois
+                        )
+                        and (
+                            1/max_scaling_rois
+                            < prev_bb.height/bb.height
+                            < max_scaling_rois
+                        )
+                    ):
                 return id
 
         return None
@@ -708,6 +695,20 @@ class FullbodyDetector:
     # The body bounding box needs correction
     # for the way it is initially computed.
     def correct_body_bounding_box(self):
+        """Correct the body bounding box.
+
+        Exctracting the body bounding box 
+        from pose estimation is not enought:
+        some body areas will remain outside 
+        (e.g., the top of the head). This function
+        corrects the bounding box defined by
+        the body pose estimation: it sums additional 
+        height and width, based on the associated
+        face size. The face bb size, differently
+        than the body bb one, is not affected by
+        different poses. The only thing changing
+        its size is the distance from the camera.
+        """
 
         delta_face_y = self.y_max_face - self.y_min_face
         delta_face_x = self.x_max_face - self.x_min_face
@@ -721,11 +722,11 @@ class FullbodyDetector:
 
     def check_bounding_box_consistency(self, bb):
         return bb.x_offset >= 0 \
-                and bb.y_offset >= 0 \
-                and bb.width > 0 \
-                and bb.height > 0 \
-                and (bb.x_offset + bb.width < self.img_width) \
-                and (bb.y_offset + bb.height < self.img_height)
+            and bb.y_offset >= 0 \
+            and bb.width > 0 \
+            and bb.height > 0 \
+            and (bb.x_offset + bb.width < self.img_width) \
+            and (bb.y_offset + bb.height < self.img_height)
 
     def detect(self, image_rgb, header):
 
@@ -890,7 +891,6 @@ class FullbodyDetector:
             skel_msg = _make_2d_skeleton_msg(header, pose_kpt)
             js = self.make_jointstate(
                 self.body_id,
-                self.image_for_jointstate,
                 pose_world_kpt,
                 pose_kpt,
                 header
@@ -1066,7 +1066,6 @@ class FullbodyDetector:
                         pub, bb, self.detectedBodies[id][2] + 1, js_pub)
 
                     js = self.make_jointstate(final_id,
-                                              self.image_for_jointstate,
                                               pose_world_kpt,
                                               pose_kpt,
                                               header)
@@ -1082,7 +1081,6 @@ class FullbodyDetector:
                     )
 
                     js = self.make_jointstate(id,
-                                              self.image_for_jointstate,
                                               pose_world_kpt,
                                               pose_kpt,
                                               header)
@@ -1151,7 +1149,6 @@ class FullbodyDetector:
         # Realsense depth encoding: 16UC1
         image_depth = self.br.imgmsg_to_cv2(depth_img, "16UC1")
         self.image_depth = image_depth
-        self.image_for_jointstate = rgb_img
         if depth_img.header.stamp > rgb_img.header.stamp:
             header = copy.copy(depth_img.header)
         else:
@@ -1164,7 +1161,6 @@ class FullbodyDetector:
 
         br = CvBridge()
         image_rgb = br.imgmsg_to_cv2(rgb_img)
-        self.image_for_jointstate = rgb_img
         header = copy.copy(rgb_img.header)
         self.rgb_info = rgb_info
         self.detect(image_rgb, header)
