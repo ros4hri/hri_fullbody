@@ -3,6 +3,7 @@
 from mpl_toolkits.mplot3d import Axes3D, axes3d
 import matplotlib.pyplot as plt
 import io
+import os
 from ikpy import chain
 from hri_fullbody.jointstate import compute_jointstate, \
     HUMAN_JOINT_NAMES, compute_jointstate
@@ -638,7 +639,7 @@ class FullbodyDetector:
             if pose_2d[0].get('visibility') > 0.85 and \
                     pose_2d[31].get('visibility') > 0.85:
                 estimated_height = left_foot_3d[1] - nose_3d[1]
-                ### Work in Progress! ###
+            ### Work in Progress! ###
 
         return js
 
@@ -698,7 +699,7 @@ class FullbodyDetector:
         """Correct the body bounding box.
 
         Exctracting the body bounding box 
-        from pose estimation is not enought:
+        from pose estimation is not enough:
         some body areas will remain outside 
         (e.g., the top of the head). This function
         corrects the bounding box defined by
@@ -1104,7 +1105,7 @@ class FullbodyDetector:
                             % (id, nb_frames))
                         pub.unregister()
                         js_pub.unregister()
-                        self.robot_state_publishers[id].terminate()
+                        os.system("rosnode kill /robot_state_publisher_body_"+id)
 
             self.detectedBodies = currentBodies
 
@@ -1114,7 +1115,8 @@ class FullbodyDetector:
                 pub, bb, _, _ = value
                 if pub:
                     list_ids.append(str(id))
-                    pub.publish(RegionOfInterestStamped(header, bb))
+                    if self.check_bounding_box_consistency(bb):
+                        pub.publish(RegionOfInterestStamped(header, bb))
 
             self.bodies_pub.publish(IdsList(header, list_ids))
 

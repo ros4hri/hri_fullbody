@@ -7,14 +7,12 @@ Panels:
         - /Global Options1
         - /Status1
         - /Grid1
-        - /Image1
         - /TF1
         - /TF1/Frames1
         - /TF1/Tree1
         - /RobotModel1
-        - /RobotModel1/Status1
       Splitter Ratio: 0.7235293984413147
-    Tree Height: 312
+    Tree Height: 415
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -33,7 +31,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: Image
+    SyncSource: ""
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -59,23 +57,17 @@ Visualization Manager:
       Plane Cell Count: 10
       Reference Frame: <Fixed Frame>
       Value: true
-    - Class: rviz/Image
-      Enabled: true
-      Image Topic: /camera/color/image_raw
-      Max Value: 1
-      Median window: 5
-      Min Value: 0
-      Name: Image
-      Normalize Range: true
-      Queue Size: 2
-      Transport Hint: raw
-      Unreliable: false
-      Value: true
     - Class: rviz/TF
       Enabled: true
       Frame Timeout: 15
       Frames:
         All Enabled: false
+        body_ad4d7:
+          Value: true
+        body_bcb00:
+          Value: true
+        body_test:
+          Value: true
         camera_color_frame:
           Value: false
         camera_color_optical_frame:
@@ -86,27 +78,147 @@ Visualization Manager:
           Value: false
         camera_link:
           Value: true
+        head_ad4d7:
+          Value: true
+        head_bcb00:
+          Value: true
+        head_p_ad4d7:
+          Value: true
+        head_p_bcb00:
+          Value: true
         head_p_test:
           Value: false
+        head_r_ad4d7:
+          Value: true
+        head_r_bcb00:
+          Value: true
+        head_r_test:
+          Value: true
         head_test:
           Value: false
+        head_y_ad4d7:
+          Value: true
+        head_y_bcb00:
+          Value: true
+        head_y_test:
+          Value: true
+        l_ankle_ad4d7:
+          Value: true
+        l_ankle_bcb00:
+          Value: true
         l_ankle_test:
           Value: false
+        l_elbow_ad4d7:
+          Value: true
+        l_elbow_bcb00:
+          Value: true
         l_elbow_test:
           Value: false
+        l_hip_ad4d7:
+          Value: true
+        l_hip_bcb00:
+          Value: true
+        l_hip_test:
+          Value: true
+        l_knee_ad4d7:
+          Value: true
+        l_knee_bcb00:
+          Value: true
         l_knee_test:
           Value: false
+        l_p_shoulder_ad4d7:
+          Value: true
+        l_p_shoulder_bcb00:
+          Value: true
+        l_p_shoulder_test:
+          Value: true
+        l_shoulder_ad4d7:
+          Value: true
+        l_shoulder_bcb00:
+          Value: true
+        l_shoulder_test:
+          Value: true
+        l_wrist_ad4d7:
+          Value: true
+        l_wrist_bcb00:
+          Value: true
         l_wrist_test:
           Value: false
+        l_y_hip_ad4d7:
+          Value: true
+        l_y_hip_bcb00:
+          Value: true
+        l_y_hip_test:
+          Value: true
+        l_y_shoulder_ad4d7:
+          Value: true
+        l_y_shoulder_bcb00:
+          Value: true
+        l_y_shoulder_test:
+          Value: true
+        r_ankle_ad4d7:
+          Value: true
+        r_ankle_bcb00:
+          Value: true
         r_ankle_test:
           Value: false
+        r_elbow_ad4d7:
+          Value: true
+        r_elbow_bcb00:
+          Value: true
         r_elbow_test:
           Value: false
+        r_hip_ad4d7:
+          Value: true
+        r_hip_bcb00:
+          Value: true
+        r_hip_test:
+          Value: true
+        r_knee_ad4d7:
+          Value: true
+        r_knee_bcb00:
+          Value: true
         r_knee_test:
           Value: false
+        r_p_shoulder_ad4d7:
+          Value: true
+        r_p_shoulder_bcb00:
+          Value: true
+        r_p_shoulder_test:
+          Value: true
+        r_shoulder_ad4d7:
+          Value: true
+        r_shoulder_bcb00:
+          Value: true
+        r_shoulder_test:
+          Value: true
+        r_wrist_ad4d7:
+          Value: true
+        r_wrist_bcb00:
+          Value: true
         r_wrist_test:
           Value: false
+        r_y_hip_ad4d7:
+          Value: true
+        r_y_hip_bcb00:
+          Value: true
+        r_y_hip_test:
+          Value: true
+        r_y_shoulder_ad4d7:
+          Value: true
+        r_y_shoulder_bcb00:
+          Value: true
+        r_y_shoulder_test:
+          Value: true
+        torso_ad4d7:
+          Value: true
+        torso_bcb00:
+          Value: true
         torso_test:
+          Value: true
+        waist_ad4d7:
+          Value: true
+        waist_bcb00:
           Value: true
         waist_test:
           Value: true
@@ -118,6 +230,96 @@ Visualization Manager:
       Show Names: false
       Tree:
         camera_link:
+          body_ad4d7:
+            l_y_hip_ad4d7:
+              l_hip_ad4d7:
+                l_knee_ad4d7:
+                  l_ankle_ad4d7:
+                    {}
+            r_y_hip_ad4d7:
+              r_hip_ad4d7:
+                r_knee_ad4d7:
+                  r_ankle_ad4d7:
+                    {}
+            waist_ad4d7:
+              torso_ad4d7:
+                head_r_ad4d7:
+                  head_y_ad4d7:
+                    head_p_ad4d7:
+                      head_ad4d7:
+                        {}
+                l_y_shoulder_ad4d7:
+                  l_p_shoulder_ad4d7:
+                    l_shoulder_ad4d7:
+                      l_elbow_ad4d7:
+                        l_wrist_ad4d7:
+                          {}
+                r_y_shoulder_ad4d7:
+                  r_p_shoulder_ad4d7:
+                    r_shoulder_ad4d7:
+                      r_elbow_ad4d7:
+                        r_wrist_ad4d7:
+                          {}
+          body_bcb00:
+            l_y_hip_bcb00:
+              l_hip_bcb00:
+                l_knee_bcb00:
+                  l_ankle_bcb00:
+                    {}
+            r_y_hip_bcb00:
+              r_hip_bcb00:
+                r_knee_bcb00:
+                  r_ankle_bcb00:
+                    {}
+            waist_bcb00:
+              torso_bcb00:
+                head_r_bcb00:
+                  head_y_bcb00:
+                    head_p_bcb00:
+                      head_bcb00:
+                        {}
+                l_y_shoulder_bcb00:
+                  l_p_shoulder_bcb00:
+                    l_shoulder_bcb00:
+                      l_elbow_bcb00:
+                        l_wrist_bcb00:
+                          {}
+                r_y_shoulder_bcb00:
+                  r_p_shoulder_bcb00:
+                    r_shoulder_bcb00:
+                      r_elbow_bcb00:
+                        r_wrist_bcb00:
+                          {}
+          body_test:
+            l_y_hip_test:
+              l_hip_test:
+                l_knee_test:
+                  l_ankle_test:
+                    {}
+            r_y_hip_test:
+              r_hip_test:
+                r_knee_test:
+                  r_ankle_test:
+                    {}
+            waist_test:
+              torso_test:
+                head_r_test:
+                  head_y_test:
+                    head_p_test:
+                      head_test:
+                        {}
+                l_y_shoulder_test:
+                  l_p_shoulder_test:
+                    l_shoulder_test:
+                      l_elbow_test:
+                        l_wrist_test:
+                          {}
+                r_y_shoulder_test:
+                  r_p_shoulder_test:
+                    r_shoulder_test:
+                      r_elbow_test:
+                        r_wrist_test:
+                          {}
           camera_color_frame:
             camera_color_optical_frame:
               {}
@@ -129,132 +331,18 @@ Visualization Manager:
     - Alpha: 1
       Class: rviz/RobotModel
       Collision Enabled: false
-      Enabled: true
+      Enabled: false
       Links:
         All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        body_test:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        head_p_test:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        head_r_test:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        head_test:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        head_y_test:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        l_ankle_test:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        l_elbow_test:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        l_hip_test:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        l_knee_test:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        l_p_shoulder_test:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        l_shoulder_test:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        l_wrist_test:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        l_y_hip_test:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        l_y_shoulder_test:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        r_ankle_test:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        r_elbow_test:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        r_hip_test:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        r_knee_test:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        r_p_shoulder_test:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        r_shoulder_test:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        r_wrist_test:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        r_y_hip_test:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        r_y_shoulder_test:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        torso_test:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        waist_test:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
       Name: RobotModel
       Robot Description: human_description_test
       TF Prefix: ""
       Update Interval: 0
-      Value: true
+      Value: false
       Visual Enabled: true
   Enabled: true
   Global Options:
@@ -284,7 +372,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.752662181854248
+      Distance: 5.443502426147461
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -307,12 +395,12 @@ Visualization Manager:
 Window Geometry:
   Displays:
     collapsed: false
+  Faces:
+    collapsed: false
   Height: 1016
   Hide Left Dock: false
   Hide Right Dock: false
-  Image:
-    collapsed: false
-  QMainWindow State: 000000ff00000000fd000000040000000000000156000002e2fc0200000009fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d000001bb000000c900fffffffb0000000a0049006d00610067006501000001fe000001210000001600fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261000000010000016a000002e2fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073010000003d000002e2000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e1000001970000000300000738000000b6fc0100000002fb0000000800540069006d0065010000000000000738000002eb00fffffffb0000000800540069006d006501000000000000045000000000000000000000046c000002e200000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd000000040000000000000156000002e2fc020000000efb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d00000222000000c900fffffffb0000000a0049006d0061006700650000000187000000d30000000000000000fb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0046006100630065007300000002100000010f0000000000000000fb0000000a004600610063006500730000000162000000670000000000000000fb0000000a0049006d0061006700650000000195000000a30000000000000000fb0000000a0049006d00610067006500000001fa000001250000000000000000fb0000000a004600610063006500730100000265000000ba0000006600ffffff000000010000016a000002e2fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073010000003d000002e2000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e1000001970000000300000738000000b6fc0100000002fb0000000800540069006d0065010000000000000738000002eb00fffffffb0000000800540069006d006501000000000000045000000000000000000000046c000002e200000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
