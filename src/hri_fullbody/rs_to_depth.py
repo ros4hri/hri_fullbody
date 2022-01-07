@@ -7,12 +7,17 @@ def rgb_to_xyz(
         y_rgb,
         rgb_camera_info,
         depth_camera_info,
-        depth_data):
+        depth_data,
+        x_offset = 0,
+        y_offset = 0):
     depth_model = PinholeCameraModel()
     rgb_model = PinholeCameraModel()
 
     depth_model.fromCameraInfo(depth_camera_info)
     rgb_model.fromCameraInfo(rgb_camera_info)
+
+    x_rgb = x_rgb + x_offset
+    y_rgb = y_rgb + y_offset
 
     if x_rgb > rgb_model.width:
         x_rgb = rgb_model.width - 1
@@ -32,3 +37,5 @@ def rgb_to_xyz(
     y = (y_d - depth_model.cy())*z/depth_model.fy()
 
     return np.array([x, y, z])
+
+
