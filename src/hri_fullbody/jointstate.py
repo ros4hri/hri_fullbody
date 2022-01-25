@@ -1,8 +1,8 @@
 
 HUMAN_JOINT_NAMES = ["waist",
-        "head_r",   
-        "head_y",
-        "head_p",
+        "r_head",   
+        "y_head",
+        "p_head",
         "l_y_shoulder",
         "l_p_shoulder",
         "l_r_shoulder",
@@ -13,9 +13,11 @@ HUMAN_JOINT_NAMES = ["waist",
         "r_elbow",
         "l_y_hip",
         "l_p_hip",
+        "l_r_hip",
         "l_knee",
         "r_y_hip",
         "r_p_hip",
+        "r_r_hip",
         "r_knee"]
 
 

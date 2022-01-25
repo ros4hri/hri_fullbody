@@ -2,7 +2,7 @@ import xacro
 import rospkg
 from pathlib import Path
 
-TPL = Path(rospkg.RosPack().get_path("hri_fullbody")) / "urdf/human-tpl.xacro"
+TPL = Path(rospkg.RosPack().get_path("human_description")) / "urdf/human-tpl.xacro"
 
 
 def make_urdf_human(

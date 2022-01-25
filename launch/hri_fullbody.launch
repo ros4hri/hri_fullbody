@@ -9,12 +9,7 @@
     <arg name="textual_debug" default="False"/>
     <arg name="stickman_debug" default="False"/>
 
-    <node name="usb_cam" pkg="usb_cam" type="usb_cam_node">
-        <remap from="/usb_cam/image_raw" to="$(arg rgb_camera_topic)"/>
-        <remap from="/usb_cam/camera_info" to="$(arg rgb_camera_info)"/>
-    </node>
-
-    <node name="hri_fullbody" pkg="hri_fullbody" type="detect" output="screen">
+    <node name="multibody_manager" pkg="hri_fullbody" type="detect" output="screen">
         <param name="use_depth" value="$(arg use_depth)"/>
         <param name="visual_debug" value="$(arg visual_debug)"/>
         <param name="textual_debug" value="$(arg textual_debug)"/>
@@ -25,7 +20,5 @@
         <remap from="/depth_image" to="$(arg depth_camera_topic)"/>
         <remap from="/depth_info" to="$(arg depth_camera_info)"/>
     </node>
-
-    <node type="rviz" name="rviz" pkg="rviz" args="-d $(find hri_fullbody)/rviz/fullbody_urdf_visualization.rviz" output="screen"/>
 
 </launch>
