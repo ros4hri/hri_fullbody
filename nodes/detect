@@ -84,6 +84,8 @@ class MultibodyManager:
 		for id in self.detected_bodies:
 			if not id in current_bodies:
 				self.detected_bodies[id][0].unregister()
+
+		print('Difference: ', )
 			
 		self.detected_bodies = current_bodies	
 
