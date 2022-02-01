@@ -9,7 +9,7 @@
     <arg name="textual_debug" default="False"/>
     <arg name="stickman_debug" default="False"/>
 
-    <node name="multibody_manager" pkg="hri_fullbody" type="detect" output="screen">
+    <node name="hri_fullbody" pkg="hri_fullbody" type="detect" output="screen">
         <param name="use_depth" value="$(arg use_depth)"/>
         <param name="visual_debug" value="$(arg visual_debug)"/>
         <param name="textual_debug" value="$(arg textual_debug)"/>
