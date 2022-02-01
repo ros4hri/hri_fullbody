@@ -5,6 +5,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   rospy
   hri_msgs
+  human_description
   std_msgs
   geometry_msgs
 )

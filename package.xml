@@ -15,6 +15,7 @@
   <depend>sensor_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>hri_msgs</depend>
+  <depend>human_description</depend>
   <exec_depend>rosconsole</exec_depend>
   <exec_depend>tf</exec_depend>
 
