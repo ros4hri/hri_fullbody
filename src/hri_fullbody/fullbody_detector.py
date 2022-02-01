@@ -7,12 +7,9 @@ from hri_fullbody.rs_to_depth import rgb_to_xyz  # SITW
 from hri_fullbody.urdf_generator import make_urdf_human
 from hri_fullbody.protobuf_to_dict import protobuf_to_dict
 import math
-import uuid
 import numpy as np
-import time
 import sys
 import copy
-from collections import deque
 import subprocess
 
 import rosparam
@@ -21,9 +18,7 @@ import tf
 
 from sensor_msgs.msg import Image, CameraInfo, RegionOfInterest
 from sensor_msgs.msg import JointState
-from hri_msgs.msg import Skeleton2D, PointOfInterest2D, \
-    IdsList, RegionOfInterestStamped
-from geometry_msgs.msg import Point, PointStamped
+from hri_msgs.msg import Skeleton2D, PointOfInterest2D
 from message_filters import ApproximateTimeSynchronizer, Subscriber
 
 from cv_bridge import CvBridge

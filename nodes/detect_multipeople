@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-from mpl_toolkits.mplot3d import Axes3D, axes3d
-import matplotlib.pyplot as plt
 import io
 import os
 from ikpy import chain
@@ -13,10 +11,8 @@ from hri_fullbody.protobuf_to_dict import protobuf_to_dict
 import math
 import uuid
 import numpy as np
-import time
 import sys
 import copy
-from collections import deque
 import subprocess
 
 import rospy
@@ -25,9 +21,7 @@ import tf
 from message_filters import ApproximateTimeSynchronizer, Subscriber
 from sensor_msgs.msg import Image, CameraInfo, RegionOfInterest
 from sensor_msgs.msg import JointState
-from hri_msgs.msg import Skeleton2D, PointOfInterest2D, \
-    IdsList, RegionOfInterestStamped
-from geometry_msgs.msg import Point, PointStamped
+from hri_msgs.msg import Skeleton2D, PointOfInterest2D, IdsList
 
 from cv_bridge import CvBridge
 import cv2
@@ -224,7 +218,7 @@ class FaceDetector:
         if PREALLOCATE_PUBLISHERS:
             self.face_pubs = {"%05d" % i: rospy.Publisher(
                 "/humans/faces/%05d/roi" % i,
-                RegionOfInterestStamped,
+                RegionOfInterest,
                 queue_size=1)
                 for i in range(1, PREALLOCATION_SIZE)}
 
@@ -351,7 +345,7 @@ class FaceDetector:
                     else:
                         pub = rospy.Publisher(
                             "/humans/faces/%s/roi" % final_id,
-                            RegionOfInterestStamped,
+                            RegionOfInterest,
                             queue_size=1
                         )
 
@@ -430,7 +424,7 @@ class FaceDetector:
                         crop_img, self.rgb_info)
                 list_ids.append(str(id))
                 if self.check_bounding_box_consistency(curr_bb):
-                    pub.publish(RegionOfInterestStamped(header, curr_bb))
+                    pub.publish(curr_bb)
                 if self.visual_debug:
                     image_rgb = cv2.rectangle(
                         image_rgb,

@@ -28,12 +28,10 @@ variables (e.g. `$ export RGB_IMAGE_TOPIC=/camera/color/image_raw/compressed`).
 ## Output Topics
 
 - `/humans/faces/*/roi` => The topic where the ROI of the face with id `*` gets
-  published. The message type is RegionOfInterestStamped from ROS4HRI ROS
-  messages package (`hri_msgs`).
+  published. The message type is `sensor_msgs/RegionOfInterest`.
 
 - `/humans/bodies/*/roi` => The topic where the ROI of the body with id `*` gets
-  published. The message type is `RegionOfInterestStamped` from ROS4HRI ROS
-  messages package (`hri_msgs`).
+  published. The message type is `sensor_msgs/RegionOfInterest`.
 
 - `/fullbody/visual` => Here gets published the video stream after some
   post-holistic-estimation image processing for debugging. It is possible to
