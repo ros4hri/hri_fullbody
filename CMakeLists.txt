@@ -19,7 +19,6 @@ catkin_install_python(PROGRAMS nodes/detect nodes/detect_multipeople
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 install(DIRECTORY
-  urdf
   launch
   rviz
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
