@@ -24,94 +24,77 @@ import copy
 import numpy as np
 from hri_fullbody.fullbody_detector import FullbodyDetector
 import uuid
-from hri_msgs.msg import IdsList 
+from hri_msgs.msg import IdsList
+
 
 def generate_id():
     return str(uuid.uuid4())[:5]  # for a 5 char long ID
 
+
 # Parameter [human_description_ebe80] does not exist, and was not found by searchParam()
 
+
 class MultibodyManager:
+    def __init__(self, use_depth, visual_debug, textual_debug, stickman_debug, max_age):
 
-	def __init__(self,
-		         use_depth,
-		         visual_debug,
-		         textual_debug,
-		         stickman_debug,
-		         max_age):
+        self.use_depth = use_depth
+        self.visual_debug = visual_debug
+        self.textual_debug = textual_debug
+        self.stickman_debug = stickman_debug
+        self.max_age = max_age
 
-		self.use_depth = use_depth
-		self.visual_debug = visual_debug
-		self.textual_debug = textual_debug
-		self.stickman_debug = stickman_debug
-		self.max_age = max_age
+        # Dictionary for the detected people
+        self.detected_bodies = {}
+        # id = uni
+        # self.detected_bodies[id][0] = personal id
 
-		# Dictionary for the detected people
-		self.detected_bodies = {}
-		# id = uni
-		#self.detected_bodies[id][0] = personal id
+        # Subscriber for the list of detected bodies
+        self.bodies_list_sub = rospy.Subscriber(
+            "/humans/bodies/tracked", IdsList, self.ids_list_cb, queue_size=1
+        )
 
-		#Subscriber for the list of detected bodies
-		self.bodies_list_sub = rospy.Subscriber('/humans/bodies/tracked',
-												IdsList,
-												self.ids_list_cb,
-												queue_size=1)
+    def ids_list_cb(self, msg):
 
+        current_bodies = {}
+        print(msg.ids)
 
-	def ids_list_cb(self, msg):
-
-		current_bodies = {}
-		print(msg.ids)
-
-		for id in msg.ids:
-			if id in self.detected_bodies:
-				current_bodies[id] = (
-					self.detected_bodies[id][0],
-					0
-					)
-			else:
-				current_bodies[id] = (
-					FullbodyDetector(
-						self.use_depth,
+        for id in msg.ids:
+            if id in self.detected_bodies:
+                current_bodies[id] = (self.detected_bodies[id][0], 0)
+            else:
+                current_bodies[id] = (
+                    FullbodyDetector(
+                        self.use_depth,
                         self.visual_debug,
                         self.textual_debug,
                         self.stickman_debug,
-                        id
-                        ),
-					0
-					)
+                        id,
+                    ),
+                    0,
+                )
 
-		for id in self.detected_bodies:
-			if not id in current_bodies:
-				self.detected_bodies[id][0].unregister()
+        for id in self.detected_bodies:
+            if not id in current_bodies:
+                self.detected_bodies[id][0].unregister()
 
-		print('Difference: ', )
-			
-		self.detected_bodies = current_bodies	
+        print(
+            "Difference: ",
+        )
+
+        self.detected_bodies = current_bodies
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
-    rospy.init_node('multibody_manager', anonymous=True)
-    
-    use_depth = rospy.get_param('~use_depth')
-    visual_debug = rospy.get_param('~visual_debug')
-    textual_debug = rospy.get_param('~textual_debug')
-    stickman_debug = rospy.get_param('~stickman_debug')
+    rospy.init_node("multibody_manager", anonymous=True)
+
+    use_depth = rospy.get_param("~use_depth")
+    visual_debug = rospy.get_param("~visual_debug")
+    textual_debug = rospy.get_param("~textual_debug")
+    stickman_debug = rospy.get_param("~stickman_debug")
     max_age = 30
-	
+
     manager = MultibodyManager(
-		use_depth,
-		visual_debug,
-		textual_debug,
-		stickman_debug,
-		max_age
-		)
+        use_depth, visual_debug, textual_debug, stickman_debug, max_age
+    )
     rospy.spin()
-
-
-
-
-
-
-
