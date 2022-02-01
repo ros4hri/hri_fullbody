@@ -88,10 +88,10 @@ if __name__ == "__main__":
 
     rospy.init_node("multibody_manager", anonymous=True)
 
-    use_depth = rospy.get_param("~use_depth")
-    visual_debug = rospy.get_param("~visual_debug")
-    textual_debug = rospy.get_param("~textual_debug")
-    stickman_debug = rospy.get_param("~stickman_debug")
+    use_depth = rospy.get_param("~use_depth", False)
+    visual_debug = rospy.get_param("~visual_debug", False)
+    textual_debug = rospy.get_param("~textual_debug", False)
+    stickman_debug = rospy.get_param("~stickman_debug", False)
     max_age = 30
 
     manager = MultibodyManager(
