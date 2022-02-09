@@ -286,30 +286,26 @@ class FullbodyDetector:
                     Subscriber(
                         "/rgb_info",
                         CameraInfo,
-                        queue_size=1,
-                        buff_size=2**24),
+                        queue_size=1),
                     Subscriber(
                         "/humans/bodies/"+self.body_id+"/roi",
                         RegionOfInterest,
+                        queue_size=1),
+                    Subscriber(
+                        "/depth_image",
+                        Image,
                         queue_size=1,
                         buff_size=2**24),
                     Subscriber(
                         "/depth_info",
                         CameraInfo,
-                        queue_size=1,
-                        buff_size=2**24),
-                    Subscriber(
-                        "/depth_img",
-                        Image,
-                        queue_size=1,
-                        buff_size=2**24)
+                        queue_size=1)
                 ],
-                1,
+                10,
                 0.1,
                 allow_headerless=True
             )
             self.tss.registerCallback(self.image_callback_depth)
-            print('Registered')
         else:
             self.tss = ApproximateTimeSynchronizer(
                 [
@@ -323,11 +319,10 @@ class FullbodyDetector:
                         CameraInfo,
                         queue_size=5)
                 ],
-                1,
+                10,
                 0.2
             )
             self.tss.registerCallback(self.image_callback_rgb)
-            print('Registered: no depth', "/humans/bodies/"+self.body_id+"/crop")
 
     def unregister(self):
         if rospy.has_param(self.human_description):
@@ -479,7 +474,6 @@ class FullbodyDetector:
             self.img_width,
             self.img_height)
         theta = np.arctan2(pose_3d[24].get('x'), -pose_3d[24].get('z'))
-        print('fino a qua ci siamo')
         if self.use_depth:
             torso_res = rgb_to_xyz(
                 torso_px[0],
@@ -682,37 +676,6 @@ class FullbodyDetector:
 
         return js
 
-    # The body bounding box needs correction
-    # for the way it is initially computed.
-    def correct_body_bounding_box(self):
-        """Correct the body bounding box.
-
-        Exctracting the body bounding box 
-        from pose estimation is not enough:
-        some body areas will remain outside 
-        (e.g., the top of the head). This function
-        corrects the bounding box defined by
-        the body pose estimation: it sums additional 
-        height and width, based on the associated
-        face size. The face bb size, differently
-        than the body bb one, is not affected by
-        different poses. The only thing changing
-        its size is the distance from the camera.
-        """
-
-        delta_face_y = self.y_max_face - self.y_min_face
-        delta_face_x = self.x_max_face - self.x_min_face
-        delta_face = max(delta_face_x, delta_face_y)
-        corrected_min_x = int(self.x_min_body-(FACE_BB_MULT*delta_face))
-        corrected_min_y = int(self.y_min_body-(FACE_BB_MULT*delta_face))
-        corrected_max_x = int(self.x_max_body+(FACE_BB_MULT*delta_face))
-        corrected_max_y = int(self.y_max_body+(FACE_BB_MULT*delta_face))
-
-        return corrected_min_x, \
-            corrected_min_y, \
-            corrected_max_x, \
-            corrected_max_y
-
     def check_bounding_box_consistency(self, bb):
         return bb.x_offset >= 0 \
             and bb.y_offset >= 0 \
@@ -731,7 +694,6 @@ class FullbodyDetector:
         results = self.detector.process(image_rgb)
         image_rgb.flags.writeable = True
 
-        print('hello')
         ######## Face Detection Process ########
 
         if hasattr(results.face_landmarks, 'landmark'):
@@ -808,85 +770,8 @@ class FullbodyDetector:
             )
             self.js_pub.publish(js)
             self.skel_pub.publish(skel_msg)
-            (self.x_min_body,
-             self.y_min_body,
-             self.x_max_body,
-             self.y_max_body) = _get_bounding_box_limits(
-                skel_msg.skeleton,
-                img_width,
-                img_height
-            )
-            self.skeleton = skel_msg.skeleton
-            if (hasattr(results.right_hand_landmarks, 'landmark') and
-                hasattr(results.face_landmarks, 'landmark') and
-                    hasattr(results.left_hand_landmarks, 'landmark')):
-                self.x_min_body = min(
-                    self.x_min_body,
-                    self.x_min_face,
-                    self.x_min_hand_left,
-                    self.x_min_hand_right
-                )
-                self.y_min_body = min(
-                    self.y_min_body,
-                    self.y_min_face,
-                    self.y_min_hand_left,
-                    self.y_min_hand_right
-                )
-                self.x_max_body = max(
-                    self.x_max_body,
-                    self.x_max_face,
-                    self.x_max_hand_left,
-                    self.x_max_hand_right
-                )
-                self.y_max_body = max(
-                    self.y_max_body,
-                    self.y_max_face,
-                    self.y_max_hand_left,
-                    self.y_max_hand_right
-                )
-            elif hasattr(results.face_landmarks, 'landmark'):
-                self.x_min_body = min(self.x_min_body, self.x_min_face)
-                self.y_min_body = min(self.y_min_body, self.y_min_face)
-                self.x_max_body = max(self.x_max_body, self.x_max_face)
-                self.y_max_body = max(self.y_max_body, self.y_max_face)
-
-            if hasattr(results.right_hand_landmarks, 'landmark'):
-                (self.x_min_body,
-                 self.y_min_body,
-                 self.x_max_body,
-                 self.y_max_body) = self.correct_body_bounding_box()
-
-            bb = RegionOfInterest(
-                self.x_min_body,
-                self.y_min_body,
-                self.x_max_body - self.x_min_body,
-                self.y_max_body - self.y_min_body,
-                True
-            )
-
-            if self.textual_debug:
-                print(
-                    'BODY: bb limits ==> x_min =', self.x_min_body,
-                    'y_min = ', self.y_min_body,
-                    'x_max = ', self.x_max_body,
-                    'y_max = ', self.y_max_body
-                )
-            if self.visual_debug:
-                image_rgb = cv2.rectangle(
-                    image_rgb,
-                    (max(self.x_min_body, 0),
-                     max(self.y_min_body, 0)),
-                    (min(self.x_max_body, img_width-1),
-                     min(self.y_max_body, img_height-1)),
-                    (255, 0, 0),
-                    3
-                )
 
         ########################################
-
-        if self.visual_debug:
-            self.visual_pub.publish(
-                CvBridge.cv2_to_imgmsg(self.br, image_rgb, "rgb8"))
 
     def image_callback_depth(self, 
                 rgb_img, 
@@ -895,17 +780,17 @@ class FullbodyDetector:
                 depth_img, 
                 depth_info):
 
-        print('here I am')
-
-        self.image_depth = depth_img
+        rgb_img = self.br.imgmsg_to_cv2(rgb_img)
+        image_depth = self.br.imgmsg_to_cv2(depth_img, "16UC1")
+        self.image_depth = image_depth
         if depth_info.header.stamp > rgb_info.header.stamp:
             header = copy.copy(depth_info.header)
         else:
             header = copy.copy(rgb_info.header)
         self.depth_info = depth_info
         self.rgb_info = rgb_info
-        self.x_offset = x_offset
-        self.y_offset = y_offset
+        self.x_offset = roi.x_offset
+        self.y_offset = roi.y_offset
         self.roi = roi
         self.detect(rgb_img, header)
 

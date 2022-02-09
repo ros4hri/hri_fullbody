@@ -56,7 +56,6 @@ class MultibodyManager:
     def ids_list_cb(self, msg):
 
         current_bodies = {}
-        print(msg.ids)
 
         for id in msg.ids:
             if id in self.detected_bodies:
@@ -76,10 +75,6 @@ class MultibodyManager:
         for id in self.detected_bodies:
             if not id in current_bodies:
                 self.detected_bodies[id][0].unregister()
-
-        print(
-            "Difference: ",
-        )
 
         self.detected_bodies = current_bodies
 
