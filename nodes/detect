@@ -53,6 +53,8 @@ class MultibodyManager:
             "/humans/bodies/tracked", IdsList, self.ids_list_cb, queue_size=1
         )
 
+        self.forbidden_ids = []
+
     def ids_list_cb(self, msg):
 
         current_bodies = {}
@@ -60,7 +62,7 @@ class MultibodyManager:
         for id in msg.ids:
             if id in self.detected_bodies:
                 current_bodies[id] = (self.detected_bodies[id][0], 0)
-            else:
+            elif not id in self.forbidden_ids:
                 current_bodies[id] = (
                     FullbodyDetector(
                         self.use_depth,
