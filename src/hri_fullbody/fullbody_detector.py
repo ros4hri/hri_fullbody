@@ -342,129 +342,85 @@ class FullbodyDetector:
         js.header = copy.copy(header)
         js.name = [jn + "_%s" % body_id for jn in HUMAN_JOINT_NAMES]
 
-        if self.from_depth_image:
-            torso_px = _normalized_to_pixel_coordinates(
-                (
-                    pose_3d[23].get('x')
-                    + pose_3d[24].get('x')
-                )
-                / 2,
-                (
-                    pose_3d[23].get('y')
-                    + pose_3d[24].get('y')
-                )
-                / 2,
-                self.img_width,
-                self.img_height)
-            torso = self.ask_for_position(torso_px[0], torso_px[1])
-            l_wrist_px = _normalized_to_pixel_coordinates(pose_3d[15].get(
-                'x'), pose_3d[15].get('y'), self.img_width, self.img_height)
-            l_wrist = self.ask_for_position(l_wrist_px[0], l_wrist_px[1])
-            l_ankle_px = _normalized_to_pixel_coordinates(pose_3d[27].get(
-                'x'), pose_3d[27].get('y'), self.img_width, self.img_height)
-            l_ankle = self.ask_for_position(l_ankle_px[0], l_ankle_px[1])
-            r_wrist_px = _normalized_to_pixel_coordinates(pose_3d[16].get(
-                'x'), pose_3d[16].get('y'), self.img_width, self.img_height)
-            r_wrist = self.ask_for_position(r_wrist_px[0], r_wrist_px[1])
-            r_ankle_px = _normalized_to_pixel_coordinates(pose_3d[28].get(
-                'x'), pose_3d[28].get('y'), self.img_width, self.img_height)
-            r_ankle = self.ask_for_position(r_ankle_px[0], r_ankle_px[1])
-            nose_px = _normalized_to_pixel_coordinates(pose_3d[0].get(
-                'x'), pose_3d[0].get('y'), self.img_width, self.img_height)
-            nose = self.ask_for_position(nose_px[0], nose_px[1])
-            feet_px = _normalized_to_pixel_coordinates(
-                (
-                    pose_3d[31].get('x')
-                    + pose_3d[32].get('x')
-                )
-                / 2,
-                (pose_3d[31].get('y')
-                 + pose_3d[32].get('y')
-                 )
-                / 2,
-                self.img_width,
-                self.img_height)
-            feet = self.ask_for_position(feet_px[0], feet_px[1])
-        else:
-            torso = np.array([
-                -(
-                    pose_3d[23].get('z')
-                    + pose_3d[24].get('z')
-                )
-                / 2,
-                (
-                    pose_3d[23].get('x')
-                    + pose_3d[24].get('x')
-                )
-                / 2,
-                -(
-                    pose_3d[23].get('y')
-                    + pose_3d[24].get('y')
-                )
-                / 2
-            ])
-            l_shoulder = np.array([
-                -pose_3d[11].get('z'),
-                pose_3d[11].get('x'),
-                -pose_3d[11].get('y')-0.605
-            ])
-            l_elbow = np.array([
-                -pose_3d[13].get('z'),
-                pose_3d[13].get('x'),
-                -pose_3d[13].get('y')-0.605
-            ])
-            l_wrist = np.array([
-                -pose_3d[15].get('z'),
-                pose_3d[15].get('x'),
-                -pose_3d[15].get('y')-0.605
-            ])
-            l_ankle = np.array([
-                -pose_3d[27].get('z'),
-                pose_3d[27].get('x'),
-                -pose_3d[27].get('y')
-            ])
-            r_shoulder = np.array([
-                -pose_3d[12].get('z'),
-                pose_3d[12].get('x'),
-                -pose_3d[12].get('y')-0.605
-            ])
-            r_elbow = np.array([
-                -pose_3d[14].get('z'),
-                pose_3d[14].get('x'),
-                -pose_3d[14].get('y')-0.605
-            ])
-            r_wrist = np.array([
-                -pose_3d[16].get('z'),
-                pose_3d[16].get('x'),
-                -pose_3d[16].get('y')-0.605
-            ])
-            r_ankle = np.array([
-                -pose_3d[28].get('z'),
-                pose_3d[28].get('x'),
-                -pose_3d[28].get('y')
-            ])
-            nose = np.array([
-                -pose_3d[0].get('z'),
-                pose_3d[0].get('x'),
-                -pose_3d[0].get('y')
-            ])
-            feet = np.array([
-                -(
-                    pose_3d[32].get('z')
-                    + pose_3d[31].get('z')
-                )
-                / 2,
-                (
-                    pose_3d[32].get('x')
-                    + pose_3d[31].get('x')
-                )
-                / 2,
-                -(
-                    pose_3d[32].get('y')
-                    + pose_3d[31].get('y')
-                )
-                / 2
-            ])
+        torso = np.array([
+            -(
+                pose_3d[23].get('z')
+                + pose_3d[24].get('z')
+            )
+            / 2,
+            (
+                pose_3d[23].get('x')
+                + pose_3d[24].get('x')
+            )
+            / 2,
+            -(
+                pose_3d[23].get('y')
+                + pose_3d[24].get('y')
+            )
+            / 2
+        ])
+        l_shoulder = np.array([
+            -pose_3d[11].get('z'),
+            pose_3d[11].get('x'),
+            -pose_3d[11].get('y')-0.605
+        ])
+        l_elbow = np.array([
+            -pose_3d[13].get('z'),
+            pose_3d[13].get('x'),
+            -pose_3d[13].get('y')-0.605
+        ])
+        l_wrist = np.array([
+            -pose_3d[15].get('z'),
+            pose_3d[15].get('x'),
+            -pose_3d[15].get('y')-0.605
+        ])
+        l_ankle = np.array([
+            -pose_3d[27].get('z'),
+            pose_3d[27].get('x'),
+            -pose_3d[27].get('y')
+        ])
+        r_shoulder = np.array([
+            -pose_3d[12].get('z'),
+            pose_3d[12].get('x'),
+            -pose_3d[12].get('y')-0.605
+        ])
+        r_elbow = np.array([
+            -pose_3d[14].get('z'),
+            pose_3d[14].get('x'),
+            -pose_3d[14].get('y')-0.605
+        ])
+        r_wrist = np.array([
+            -pose_3d[16].get('z'),
+            pose_3d[16].get('x'),
+            -pose_3d[16].get('y')-0.605
+        ])
+        r_ankle = np.array([
+            -pose_3d[28].get('z'),
+            pose_3d[28].get('x'),
+            -pose_3d[28].get('y')
+        ])
+        nose = np.array([
+            -pose_3d[0].get('z'),
+            pose_3d[0].get('x'),
+            -pose_3d[0].get('y')
+        ])
+        feet = np.array([
+            -(
+                pose_3d[32].get('z')
+                + pose_3d[31].get('z')
+            )
+            / 2,
+            (
+                pose_3d[32].get('x')
+                + pose_3d[31].get('x')
+            )
+            / 2,
+            -(
+                pose_3d[32].get('y')
+                + pose_3d[31].get('y')
+            )
+            / 2
+        ])
 
         ### depth and rotation ###
 
@@ -490,15 +446,15 @@ class FullbodyDetector:
         ### Publishing tf transformations ###
 
         self.tb.sendTransform(
-            (torso_res[2], -torso_res[0], 0.0),
+            (torso_res[0], 0.0, torso_res[2]),
             tf.transformations.quaternion_from_euler(
-                0,
-                0,
-                1.5*np.pi+theta
+                np.pi/2,
+                np.pi/2-(theta+np.pi/2),
+                0
             ),
             header.stamp,
             "body_%s" % body_id,
-            "camera_link"
+            header.frame_id
         )
 
         if self.stickman_debug:
@@ -785,6 +741,7 @@ class FullbodyDetector:
         self.image_depth = image_depth
         if depth_info.header.stamp > rgb_info.header.stamp:
             header = copy.copy(depth_info.header)
+            header.frame_id = rgb_info.header.frame_id # to check 
         else:
             header = copy.copy(rgb_info.header)
         self.depth_info = depth_info
