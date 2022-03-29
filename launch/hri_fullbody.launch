@@ -18,6 +18,7 @@
     <!-- publishes a TF tree of the joints, *without* performing IK kinematics to
          properly align the joints' frames to the kinematci model of the human -->
     <arg name="stickman_debug" default="False"/>
+    <arg name="single_body" default="False"/>
 
 
     <node name="hri_fullbody" pkg="hri_fullbody" type="detect" output="screen">
@@ -25,9 +26,10 @@
         <param name="visual_debug" value="$(arg visual_debug)"/>
         <param name="textual_debug" value="$(arg textual_debug)"/>
         <param name="stickman_debug" value="$(arg stickman_debug)"/>
+        <param name="single_body" value="$(arg single_body)"/>
 
-        <remap from="/rgb_image" to="$(arg rgb_camera_topic)"/>
-        <remap from="/rgb_info" to="$(arg rgb_camera_info)"/>
+        <remap from="/image" to="$(arg rgb_camera_topic)"/>
+        <remap from="/image_info" to="$(arg rgb_camera_info)"/>
         <remap from="/depth_image" to="$(arg depth_camera_topic)"/>
         <remap from="/depth_info" to="$(arg depth_camera_info)"/>
     </node>

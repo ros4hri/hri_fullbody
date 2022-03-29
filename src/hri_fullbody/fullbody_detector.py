@@ -18,7 +18,7 @@ import tf
 
 from sensor_msgs.msg import Image, CameraInfo, RegionOfInterest
 from sensor_msgs.msg import JointState
-from hri_msgs.msg import Skeleton2D, PointOfInterest2D
+from hri_msgs.msg import Skeleton2D, PointOfInterest2D, IdsList
 from message_filters import ApproximateTimeSynchronizer, Subscriber
 
 from cv_bridge import CvBridge
@@ -178,12 +178,14 @@ class FullbodyDetector:
                  visual_debug,
                  textual_debug,
                  stickman_debug,
-                 body_id):
+                 body_id,
+                 single_body = False):
 
         self.use_depth = use_depth
         self.visual_debug = visual_debug
         self.textual_debug = textual_debug
         self.stickman_debug = stickman_debug
+        self.single_body = single_body
 
         self.detector = mp_holistic.Holistic(
             min_detection_confidence=0.5, min_tracking_confidence=0.5)
@@ -275,7 +277,7 @@ class FullbodyDetector:
 
         self.tb = tf.TransformBroadcaster()
 
-        if self.use_depth:
+        if self.use_depth and not single_body:
             self.tss = ApproximateTimeSynchronizer(
                 [
                     Subscriber(
@@ -284,7 +286,7 @@ class FullbodyDetector:
                         queue_size=1,
                         buff_size=2**24),
                     Subscriber(
-                        "/rgb_info",
+                        "/image_info",
                         CameraInfo,
                         queue_size=1),
                     Subscriber(
@@ -306,7 +308,7 @@ class FullbodyDetector:
                 allow_headerless=True
             )
             self.tss.registerCallback(self.image_callback_depth)
-        else:
+        elif not self.use_depth and not single_body:
             self.tss = ApproximateTimeSynchronizer(
                 [
                     Subscriber(
@@ -315,7 +317,7 @@ class FullbodyDetector:
                         queue_size=1,
                         buff_size=2**24),
                     Subscriber(
-                        "/rgb_info",
+                        "/image_info",
                         CameraInfo,
                         queue_size=5)
                 ],
@@ -323,6 +325,61 @@ class FullbodyDetector:
                 0.2
             )
             self.tss.registerCallback(self.image_callback_rgb)
+        elif self.use_depth and single_body:
+            # Here the code to detect one person only with depth information
+            self.tss = ApproximateTimeSynchronizer(
+                [
+                    Subscriber(
+                        "/image",
+                        Image,
+                        queue_size=1,
+                        buff_size=2**24),
+                    Subscriber(
+                        "/image_info",
+                        CameraInfo,
+                        queue_size=1),
+                    Subscriber(
+                        "/depth_image",
+                        Image,
+                        queue_size=1,
+                        buff_size=2**24),
+                    Subscriber(
+                        "/depth_info",
+                        CameraInfo,
+                        queue_size=1)
+                ],
+                10,
+                0.1,
+                allow_headerless=True
+            )
+            self.tss.registerCallback(self.image_callback_depth_single_person)
+        else:
+            self.tss = ApproximateTimeSynchronizer(
+                [
+                    Subscriber(
+                        "/image",
+                        Image,
+                        queue_size=1,
+                        buff_size=2**24),
+                    Subscriber(
+                        "/image_info",
+                        CameraInfo,
+                        queue_size=5)
+                ],
+                10,
+                0.2
+            )
+            self.tss.registerCallback(self.image_callback_rgb)
+
+        if single_body:
+            self.ids_pub = rospy.Publisher(
+                "/humans/bodies/tracked",
+                IdsList,
+                queue_size=1)
+            self.roi_pub = rospy.Publisher(
+                "/humans/bodies/"+body_id+"/roi",
+                RegionOfInterest,
+                queue_size=1)
 
     def unregister(self):
         if rospy.has_param(self.human_description):
@@ -449,7 +506,7 @@ class FullbodyDetector:
             (torso_res[0], 0.0, torso_res[2]),
             tf.transformations.quaternion_from_euler(
                 np.pi/2,
-                np.pi/2-(theta+np.pi/2),
+                -theta,
                 0
             ),
             header.stamp,
@@ -585,7 +642,8 @@ class FullbodyDetector:
                 "mediapipe_torso"
             )
         js.position = compute_jointstate(
-            self.ik_chains[body_id], torso,
+            self.ik_chains[body_id], 
+            torso,
             l_wrist,
             l_ankle,
             r_wrist,
@@ -650,6 +708,11 @@ class FullbodyDetector:
         results = self.detector.process(image_rgb)
         image_rgb.flags.writeable = True
 
+        self.x_min_person = img_width
+        self.y_min_person = img_height
+        self.x_max_person = 0
+        self.y_max_person = 0
+
         ######## Face Detection Process ########
 
         if hasattr(results.face_landmarks, 'landmark'):
@@ -661,6 +724,19 @@ class FullbodyDetector:
                 img_width,
                 img_height
             )
+
+            self.x_min_person = int(min(
+                self.x_min_person, 
+                self.x_min_face))
+            self.y_min_person = int(min(
+                self.y_min_person, 
+                self.y_min_face))
+            self.x_max_person = int(max(
+                self.x_max_person, 
+                self.x_max_face))
+            self.y_max_person = int(max(
+                self.y_max_person, 
+                self.y_max_face))
 
             # Since I create this structure starting from a face,
             # then I can just publish the body if I need.
@@ -689,6 +765,18 @@ class FullbodyDetector:
              self.y_max_hand_left) = _get_bounding_box_limits(landmarks,
                                                               img_width,
                                                               img_height)
+            self.x_min_person = int(min(
+                self.x_min_person, 
+                self.x_min_hand_left))
+            self.y_min_person = int(min(
+                self.y_min_person, 
+                self.y_min_hand_left))
+            self.x_max_person = int(max(
+                self.x_max_person, 
+                self.x_max_hand_left))
+            self.y_max_person = int(max(
+                self.y_max_person, 
+                self.y_max_hand_left))
 
         if hasattr(results.right_hand_landmarks, 'landmark'):
             pose_keypoints = protobuf_to_dict(results.pose_landmarks)
@@ -706,6 +794,18 @@ class FullbodyDetector:
              self.y_max_hand_right) = _get_bounding_box_limits(landmarks,
                                                                img_width,
                                                                img_height)
+            self.x_min_person = int(min(
+                self.x_min_person, 
+                self.x_min_hand_right))
+            self.y_min_person = int(min(
+                self.y_min_person, 
+                self.y_min_hand_right))
+            self.x_max_person = int(max(
+                self.x_max_person, 
+                self.x_max_hand_right))
+            self.y_max_person = int(max(
+                self.y_max_person, 
+                self.y_max_hand_right))
 
         ############################################
 
@@ -726,6 +826,49 @@ class FullbodyDetector:
             )
             self.js_pub.publish(js)
             self.skel_pub.publish(skel_msg)
+            if self.single_body:
+                landmarks = [None]*32
+                for i in range(0, 32):
+                    landmarks[i] = PointOfInterest2D(
+                    pose_kpt[i].get('x'),
+                    pose_kpt[i].get('y'),
+                    pose_kpt[i].get('visibility')
+                )
+                (self.x_min_body,
+                 self.y_min_body,
+                 self.x_max_body,
+                 self.y_max_body) = _get_bounding_box_limits(landmarks,
+                                                                img_width,
+                                                                img_height)
+                self.x_min_person = int(min(
+                    self.x_min_person, 
+                    self.x_min_body))
+                self.y_min_person = int(min(
+                    self.y_min_person, 
+                    self.y_min_body))
+                self.x_max_person = int(max(
+                    self.x_max_person, 
+                    self.x_max_body))
+                self.y_max_person = int(max(
+                    self.y_max_person, 
+                    self.y_max_body))
+
+        if self.single_body:
+            ids_list = IdsList()
+            if self.x_min_person < self.x_max_person \
+                and self.y_min_person < self.y_max_person:
+                self.x_min_person = max(0, self.x_min_person)
+                self.y_min_person = max(0, self.y_min_person)
+                self.x_max_person = min(img_width, self.x_max_person)
+                self.y_max_person = min(img_height, self.y_max_person)
+                ids_list.ids = [self.body_id]
+                roi = RegionOfInterest()
+                roi.x_offset = self.x_min_person
+                roi.y_offset = self.y_min_person
+                roi.width = self.x_max_person - self.x_min_person
+                roi.height = self.y_max_person - self.y_min_person
+                self.roi_pub.publish(roi)
+            self.ids_pub.publish(ids_list)
 
         ########################################
 
@@ -749,6 +892,29 @@ class FullbodyDetector:
         self.x_offset = roi.x_offset
         self.y_offset = roi.y_offset
         self.roi = roi
+        self.detect(rgb_img, header)
+
+    def image_callback_depth_single_person(self, 
+                rgb_img, 
+                rgb_info,
+                depth_img, 
+                depth_info):
+
+        rgb_img = self.br.imgmsg_to_cv2(rgb_img)
+        image_depth = self.br.imgmsg_to_cv2(depth_img, "16UC1")
+        self.image_depth = image_depth
+        if depth_info.header.stamp > rgb_info.header.stamp:
+            header = copy.copy(depth_info.header)
+            header.frame_id = rgb_info.header.frame_id # to check 
+        else:
+            header = copy.copy(rgb_info.header)
+        self.depth_info = depth_info
+        self.rgb_info = rgb_info
+        self.x_offset = 0
+        self.y_offset = 0
+        self.roi = RegionOfInterest()
+        self.roi.x_offset = 0
+        self.roi.y_offset = 0
         self.detect(rgb_img, header)
 
     def image_callback_rgb(self, rgb_img, rgb_info):

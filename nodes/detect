@@ -30,18 +30,22 @@ from hri_msgs.msg import IdsList
 def generate_id():
     return str(uuid.uuid4())[:5]  # for a 5 char long ID
 
-
 # Parameter [human_description_ebe80] does not exist, and was not found by searchParam()
 
 
 class MultibodyManager:
-    def __init__(self, use_depth, visual_debug, textual_debug, stickman_debug, max_age):
+    
+    def __init__(
+        self, 
+        use_depth, 
+        visual_debug, 
+        textual_debug, 
+        stickman_debug):
 
         self.use_depth = use_depth
         self.visual_debug = visual_debug
         self.textual_debug = textual_debug
         self.stickman_debug = stickman_debug
-        self.max_age = max_age
 
         # Dictionary for the detected people
         self.detected_bodies = {}
@@ -79,6 +83,7 @@ class MultibodyManager:
         self.detected_bodies = current_bodies
 
 
+
 if __name__ == "__main__":
 
     rospy.init_node("multibody_manager", anonymous=True)
@@ -87,9 +92,30 @@ if __name__ == "__main__":
     visual_debug = rospy.get_param("~visual_debug", False)
     textual_debug = rospy.get_param("~textual_debug", False)
     stickman_debug = rospy.get_param("~stickman_debug", False)
-    max_age = 30
+    single_body = rospy.get_param("~single_body", False)
+    manager = None
 
-    manager = MultibodyManager(
-        use_depth, visual_debug, textual_debug, stickman_debug, max_age
-    )
+    print(use_depth)
+    print(single_body)
+
+    if not single_body:
+        manager = MultibodyManager(
+            use_depth, 
+            visual_debug, 
+            textual_debug, 
+            stickman_debug)
+
+        rospy.logwarn('Hola chicos')
+
+    else:
+        id = generate_id()
+        manager = FullbodyDetector(
+            use_depth,
+            visual_debug,
+            textual_debug,
+            stickman_debug,
+            id,
+            single_body)
+        rospy.logwarn('generated single person detector')
+
     rospy.spin()

@@ -15,7 +15,7 @@ catkin_python_setup()
 catkin_package(
     CATKIN_DEPENDS hri_msgs)
 
-catkin_install_python(PROGRAMS nodes/detect nodes/detect_multipeople
+catkin_install_python(PROGRAMS nodes/detect nodes/detect_multipeople nodes/single_body_debug
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 install(DIRECTORY
