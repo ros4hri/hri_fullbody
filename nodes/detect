@@ -24,6 +24,7 @@ import copy
 import numpy as np
 from hri_fullbody.fullbody_detector import FullbodyDetector
 import uuid
+import re
 from hri_msgs.msg import IdsList
 
 
@@ -94,6 +95,7 @@ if __name__ == "__main__":
     stickman_debug = rospy.get_param("~stickman_debug", False)
     single_body = rospy.get_param("~single_body", False)
     manager = None
+    regex = "^([e|E]\d{4}|\d[e|E]\d{3}|\d{2}[e|E]\d{2}|\d{3}[e|E]\d|\d{4}[e|E]|\d{5})$"
 
     print(use_depth)
     print(single_body)
@@ -109,6 +111,10 @@ if __name__ == "__main__":
 
     else:
         id = generate_id()
+        regex_matching = re.search(regex, id)
+        while regex_matching:
+            id = generate_id()
+            regex_matching = re.search(regex, id)
         manager = FullbodyDetector(
             use_depth,
             visual_debug,

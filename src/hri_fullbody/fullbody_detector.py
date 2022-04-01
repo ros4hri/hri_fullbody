@@ -6,6 +6,7 @@ from hri_fullbody.jointstate import compute_jointstate, \
 from hri_fullbody.rs_to_depth import rgb_to_xyz  # SITW
 from hri_fullbody.urdf_generator import make_urdf_human
 from hri_fullbody.protobuf_to_dict import protobuf_to_dict
+from hri_fullbody.one_euro_filter import OneEuroFilter
 import math
 import numpy as np
 import sys
@@ -20,6 +21,8 @@ from sensor_msgs.msg import Image, CameraInfo, RegionOfInterest
 from sensor_msgs.msg import JointState
 from hri_msgs.msg import Skeleton2D, PointOfInterest2D, IdsList
 from message_filters import ApproximateTimeSynchronizer, Subscriber
+from std_msgs.msg import Float64
+from geometry_msgs.msg import TwistStamped, Point
 
 from cv_bridge import CvBridge
 import cv2
@@ -276,6 +279,8 @@ class FullbodyDetector:
                                      stderr=subprocess.STDOUT)
 
         self.tb = tf.TransformBroadcaster()
+        self.one_euro_filter = [None] * 3
+        self.one_euro_filter_dot = [None] * 3
 
         if self.use_depth and not single_body:
             self.tss = ApproximateTimeSynchronizer(
@@ -380,6 +385,50 @@ class FullbodyDetector:
                 "/humans/bodies/"+body_id+"/roi",
                 RegionOfInterest,
                 queue_size=1)
+
+        ### Filtering debug ###
+        self.x_filtered_pub = rospy.Publisher(
+            "/filtered_x", 
+            Float64, 
+            queue_size=1)
+        self.x_unfiltered_pub = rospy.Publisher(
+            "/unfiltered_x",
+            Float64,
+            queue_size=1)
+        self.x_dot_filtered_pub = rospy.Publisher(
+            "/filtered_x_dot",
+            Float64,
+            queue_size=1)
+        self.x_dot_double_filtered_pub = rospy.Publisher(
+            "/double_filtered_x_dot",
+            Float64,
+            queue_size=1)
+        #######################
+
+        self.body_filtered_position = [None] * 3
+        self.body_filtered_position_prev = [None] * 3
+        self.body_unfiltered_position = [None] * 3 # Debugging purpose
+        self.body_vel_estimation = [None] * 3
+        self.body_vel_estimation_filtered = [None] * 3
+
+        self.position_msg = [Point(), Point()] # [0] = filtered, [1] = unfiltered
+        filtered_position_topic = "/humans/bodies/"+body_id+"/f_position"
+        self.body_filtered_position_pub = rospy.Publisher( 
+            filtered_position_topic,
+            Point,
+            queue_size=1) # Debugging purpose
+        unfiltered_position_topic = "/humans/bodies/"+body_id+"/uf_position"
+        self.body_unfiltered_position_pub = rospy.Publisher( 
+            unfiltered_position_topic,
+            Point,
+            queue_size=1) # Debugging purpose
+        self.speed_msg = TwistStamped()
+        self.speed_msg.header.frame_id = "body_"+body_id
+        twist_topic = "/humans/bodies/"+body_id+"/speed"
+        self.speed_pub = rospy.Publisher(
+            twist_topic,
+            TwistStamped,
+            queue_size=1)
 
     def unregister(self):
         if rospy.has_param(self.human_description):
@@ -513,6 +562,71 @@ class FullbodyDetector:
             "body_%s" % body_id,
             header.frame_id
         )
+
+        t = header.stamp.to_sec()
+
+        if not self.one_euro_filter[0] and self.use_depth:
+            self.one_euro_filter[0] = OneEuroFilter(
+                t, 
+                torso_res[2], 
+                beta=0.05, 
+                d_cutoff=0.5, 
+                min_cutoff=0.3)
+            self.one_euro_filter[1] = OneEuroFilter(
+                t, 
+                torso_res[0], 
+                beta=0.05, 
+                d_cutoff=0.5, 
+                min_cutoff=0.3)
+            self.body_filtered_position[0] = torso_res[2]
+            self.body_filtered_position[1] = torso_res[0]
+        elif self.use_depth:
+            self.body_filtered_position_prev[0] = \
+                self.body_filtered_position[0]
+            self.body_filtered_position_prev[1] = \
+                self.body_filtered_position[1]
+            self.body_filtered_position[0], t_e = \
+                self.one_euro_filter[0](t, torso_res[2])
+            self.body_filtered_position[1], _ = \
+                self.one_euro_filter[1](t, torso_res[0])
+
+            self.position_msg[0].x = self.body_filtered_position[0]
+            self.position_msg[0].y = self.body_filtered_position[1]
+            self.position_msg[1].x = torso_res[2]
+            self.position_msg[1].y = torso_res[0]
+            self.body_filtered_position_pub.publish(self.position_msg[0])
+            self.body_unfiltered_position_pub.publish(self.position_msg[1])
+
+            self.body_vel_estimation[0] = \
+                (self.body_filtered_position[0] \
+                 - self.body_filtered_position_prev[0])/t_e
+            self.body_vel_estimation[1] = \
+                (self.body_filtered_position[1] \
+                 - self.body_filtered_position_prev[1])/t_e
+
+            if not self.one_euro_filter_dot[0]:
+                self.one_euro_filter_dot[0] = OneEuroFilter(
+                    t, 
+                    self.body_vel_estimation[0], 
+                    beta=0.2, 
+                    d_cutoff=0.2, 
+                    min_cutoff=0.5)
+                self.one_euro_filter_dot[1] = OneEuroFilter(
+                    t, 
+                    self.body_vel_estimation[1], 
+                    beta=0.2, 
+                    d_cutoff=0.2, 
+                    min_cutoff=0.5)
+            else:
+                self.body_vel_estimation_filtered[0], _ = \
+                    self.one_euro_filter_dot[0](t, self.body_vel_estimation[0])
+                self.body_vel_estimation_filtered[1], _ = \
+                    self.one_euro_filter_dot[1](t, self.body_vel_estimation[1])
+                self.speed_msg.twist.linear.x = \
+                    -self.body_vel_estimation_filtered[0]
+                self.speed_msg.twist.linear.y = \
+                    self.body_vel_estimation_filtered[1]
+                self.speed_pub.publish(self.speed_msg)
 
         if self.stickman_debug:
             self.tb.sendTransform(
@@ -650,6 +764,7 @@ class FullbodyDetector:
             r_ankle
         )
 
+        """
         if self.use_depth:
             nose_px = [pose_2d[0].get('x'), pose_2d[0].get('y')]
             nose_px = _normalized_to_pixel_coordinates(
@@ -687,6 +802,7 @@ class FullbodyDetector:
                     pose_2d[31].get('visibility') > 0.85:
                 estimated_height = left_foot_3d[1] - nose_3d[1]
             ### Work in Progress! ###
+        """
 
         return js
 
