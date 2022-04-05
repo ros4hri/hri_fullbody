@@ -39,12 +39,10 @@ class MultibodyManager:
     def __init__(
         self, 
         use_depth, 
-        visual_debug, 
         textual_debug, 
         stickman_debug):
 
         self.use_depth = use_depth
-        self.visual_debug = visual_debug
         self.textual_debug = textual_debug
         self.stickman_debug = stickman_debug
 
@@ -69,13 +67,15 @@ class MultibodyManager:
                 current_bodies[id] = (
                     FullbodyDetector(
                         self.use_depth,
-                        self.visual_debug,
                         self.textual_debug,
                         self.stickman_debug,
                         id,
                     ),
-                    0,
+                    0
                 )
+                rospy.loginfo("Generated single person detector for body_%s", id)
+                rospy.loginfo("Waiting for frames on topic %s", \
+                    current_bodies[id].get_image_topic())
 
         for id in self.detected_bodies:
             if not id in current_bodies:
@@ -87,41 +87,42 @@ class MultibodyManager:
 
 if __name__ == "__main__":
 
-    rospy.init_node("multibody_manager", anonymous=True)
+    rospy.init_node("fullbody_manager", anonymous=True)
 
     use_depth = rospy.get_param("~use_depth", False)
-    visual_debug = rospy.get_param("~visual_debug", False)
     textual_debug = rospy.get_param("~textual_debug", False)
     stickman_debug = rospy.get_param("~stickman_debug", False)
     single_body = rospy.get_param("~single_body", False)
     manager = None
     regex = "^([e|E]\d{4}|\d[e|E]\d{3}|\d{2}[e|E]\d{2}|\d{3}[e|E]\d|\d{4}[e|E]|\d{5})$"
 
-    print(use_depth)
-    print(single_body)
+    rospy.loginfo("Using depth camera for body position estimation: %s", \
+     str(use_depth))
+    if single_body:
+        rospy.loginfo("Setting up for single body pose estimation")
+    else:
+        rospy.loginfo("Setting up for multibody pose estimation")
 
     if not single_body:
         manager = MultibodyManager(
             use_depth, 
-            visual_debug, 
             textual_debug, 
             stickman_debug)
-
-        rospy.logwarn('Hola chicos')
-
+        rospy.loginfo("Waiting for ids on /humans/bodies/tracked")
     else:
         id = generate_id()
         regex_matching = re.search(regex, id)
         while regex_matching:
             id = generate_id()
             regex_matching = re.search(regex, id)
-        manager = FullbodyDetector(
+        current_body = FullbodyDetector(
             use_depth,
-            visual_debug,
             textual_debug,
             stickman_debug,
             id,
             single_body)
-        rospy.logwarn('generated single person detector')
+        rospy.loginfo("Generated single person detector for body_%s", id)
+        rospy.loginfo("Waiting for frames on topic %s", \
+            current_body.get_image_topic())
 
     rospy.spin()

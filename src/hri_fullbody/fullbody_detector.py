@@ -7,6 +7,7 @@ from hri_fullbody.rs_to_depth import rgb_to_xyz  # SITW
 from hri_fullbody.urdf_generator import make_urdf_human
 from hri_fullbody.protobuf_to_dict import protobuf_to_dict
 from hri_fullbody.one_euro_filter import OneEuroFilter
+from hri_fullbody.face_pose_estimation import face_pose_estimation
 import math
 import numpy as np
 import sys
@@ -137,13 +138,13 @@ def _make_2d_skeleton_msg(header, pose_2d):
     return skel
 
 
-def _get_bounding_box_limits(face_landmarks, image_width, image_height):
+def _get_bounding_box_limits(landmarks, image_width, image_height):
     x_max = 0.0
     y_max = 0.0
     x_min = 1.0
     y_min = 1.0
     # for result in results:
-    for data_point in face_landmarks:
+    for data_point in landmarks:
         if x_max < data_point.x:
             x_max = data_point.x
         if y_max < data_point.y:
@@ -153,13 +154,13 @@ def _get_bounding_box_limits(face_landmarks, image_width, image_height):
         if y_min > data_point.y:
             y_min = data_point.y
 
-    delta_x = x_max - x_min
-    delta_y = y_max - y_min
+    #delta_x = x_max - x_min
+    #delta_y = y_max - y_min
 
-    x_min -= BB_MULT*delta_x
-    y_min -= BB_MULT*delta_y
-    x_max += BB_MULT*delta_x
-    y_max += BB_MULT*delta_y
+    #x_min -= BB_MULT*delta_x
+    #y_min -= BB_MULT*delta_y
+    #x_max += BB_MULT*delta_x
+    #y_max += BB_MULT*delta_y
     x_min, y_min = _normalized_to_pixel_coordinates(
         x_min, y_min, image_width, image_height)
     x_max, y_max = _normalized_to_pixel_coordinates(
@@ -178,14 +179,12 @@ class FullbodyDetector:
 
     def __init__(self,
                  use_depth,
-                 visual_debug,
                  textual_debug,
                  stickman_debug,
                  body_id,
                  single_body = False):
 
         self.use_depth = use_depth
-        self.visual_debug = visual_debug
         self.textual_debug = textual_debug
         self.stickman_debug = stickman_debug
         self.single_body = single_body
@@ -205,8 +204,11 @@ class FullbodyDetector:
         self.x_max_body = 0.00
         self.y_max_body = 0.00
 
+        self.body_position_estimation = [None] * 3
+        self.trans_vec = [None] * 3
+
         js_topic = '/joint_states_' + body_id
-        skel_topic = '/humans/body/' + body_id + '/skeleton'
+        skel_topic = '/humans/bodies/' + body_id + '/skeleton'
 
         self.skel_pub = rospy.Publisher(
             skel_topic, Skeleton2D, queue_size=1)
@@ -282,16 +284,25 @@ class FullbodyDetector:
         self.one_euro_filter = [None] * 3
         self.one_euro_filter_dot = [None] * 3
 
+        if not single_body:
+            self.image_subscriber = Subscriber(
+                                        "/humans/bodies/"+self.body_id+"/crop",
+                                        Image,
+                                        queue_size=1,
+                                        buff_size=2**24)
+        else:
+            self.image_subscriber = Subscriber(
+                                        "/image",
+                                        Image,
+                                        queue_size=1,
+                                        buff_size=2**24)
+
         if self.use_depth and not single_body:
             self.tss = ApproximateTimeSynchronizer(
                 [
+                    self.image_subscriber,
                     Subscriber(
-                        "/humans/bodies/"+self.body_id+"/crop",
-                        Image,
-                        queue_size=1,
-                        buff_size=2**24),
-                    Subscriber(
-                        "/image_info",
+                        "/camera_info",
                         CameraInfo,
                         queue_size=1),
                     Subscriber(
@@ -316,13 +327,9 @@ class FullbodyDetector:
         elif not self.use_depth and not single_body:
             self.tss = ApproximateTimeSynchronizer(
                 [
+                    self.image_subscriber,
                     Subscriber(
-                        "/humans/bodies/"+self.body_id+"/crop",
-                        Image,
-                        queue_size=1,
-                        buff_size=2**24),
-                    Subscriber(
-                        "/image_info",
+                        "/camera_info",
                         CameraInfo,
                         queue_size=5)
                 ],
@@ -334,13 +341,9 @@ class FullbodyDetector:
             # Here the code to detect one person only with depth information
             self.tss = ApproximateTimeSynchronizer(
                 [
+                    self.image_subscriber,
                     Subscriber(
-                        "/image",
-                        Image,
-                        queue_size=1,
-                        buff_size=2**24),
-                    Subscriber(
-                        "/image_info",
+                        "/camera_info",
                         CameraInfo,
                         queue_size=1),
                     Subscriber(
@@ -361,13 +364,9 @@ class FullbodyDetector:
         else:
             self.tss = ApproximateTimeSynchronizer(
                 [
+                    self.image_subscriber,
                     Subscriber(
-                        "/image",
-                        Image,
-                        queue_size=1,
-                        buff_size=2**24),
-                    Subscriber(
-                        "/image_info",
+                        "/camera_info",
                         CameraInfo,
                         queue_size=5)
                 ],
@@ -386,32 +385,15 @@ class FullbodyDetector:
                 RegionOfInterest,
                 queue_size=1)
 
-        ### Filtering debug ###
-        self.x_filtered_pub = rospy.Publisher(
-            "/filtered_x", 
-            Float64, 
-            queue_size=1)
-        self.x_unfiltered_pub = rospy.Publisher(
-            "/unfiltered_x",
-            Float64,
-            queue_size=1)
-        self.x_dot_filtered_pub = rospy.Publisher(
-            "/filtered_x_dot",
-            Float64,
-            queue_size=1)
-        self.x_dot_double_filtered_pub = rospy.Publisher(
-            "/double_filtered_x_dot",
-            Float64,
-            queue_size=1)
-        #######################
-
         self.body_filtered_position = [None] * 3
         self.body_filtered_position_prev = [None] * 3
         self.body_unfiltered_position = [None] * 3 # Debugging purpose
         self.body_vel_estimation = [None] * 3
         self.body_vel_estimation_filtered = [None] * 3
 
-        self.position_msg = [Point(), Point()] # [0] = filtered, [1] = unfiltered
+        self.position_msg = [Point(), Point()]
+        # [0] = filtered, [1] = unfiltered
+        
         filtered_position_topic = "/humans/bodies/"+body_id+"/f_position"
         self.body_filtered_position_pub = rospy.Publisher( 
             filtered_position_topic,
@@ -424,11 +406,15 @@ class FullbodyDetector:
             queue_size=1) # Debugging purpose
         self.speed_msg = TwistStamped()
         self.speed_msg.header.frame_id = "body_"+body_id
-        twist_topic = "/humans/bodies/"+body_id+"/speed"
+        twist_topic = "/humans/bodies/"+body_id+"/velocity"
         self.speed_pub = rospy.Publisher(
             twist_topic,
             TwistStamped,
             queue_size=1)
+
+        self.image_info_sub = rospy.Subscriber(
+            "camera_info", CameraInfo, self.info_callback
+        )
 
     def unregister(self):
         if rospy.has_param(self.human_description):
@@ -436,6 +422,46 @@ class FullbodyDetector:
             rospy.loginfo('Deleted parameter %s', self.human_description)
         os.system("rosnode kill /robot_state_publisher_body_"+self.body_id)
         rospy.logwarn('unregistered %s', self.body_id)
+
+    def info_callback(self, cameraInfo):
+
+        if not hasattr(self, 'cameraInfo'):
+            self.cameraInfo = cameraInfo
+
+            self.K = np.zeros((3, 3), np.float32)
+            self.K[0][0:3] = self.cameraInfo.K[0:3]
+            self.K[1][0:3] = self.cameraInfo.K[3:6]
+            self.K[2][0:3] = self.cameraInfo.K[6:9]
+
+            self.f_x = self.K[0][0]
+            self.f_y = self.K[1][1]
+            self.c_x = self.K[0][2]
+            self.c_y = self.K[1][2]
+
+    def face_to_body_position_estimation(self, skel_msg):
+        body_px = [(skel_msg.skeleton[Skeleton2D.LEFT_HIP].x \
+                    + skel_msg.skeleton[Skeleton2D.RIGHT_HIP].x) \
+                    / 2,
+                   (skel_msg.skeleton[Skeleton2D.LEFT_HIP].y \
+                    + skel_msg.skeleton[Skeleton2D.RIGHT_HIP].y) \
+                    / 2]
+        body_px = _normalized_to_pixel_coordinates(body_px[0], 
+                                                   body_px[1], 
+                                                   self.img_width,
+                                                   self.img_height)
+
+        d_x = np.sqrt((self.trans_vec[0]/1000)**2 \
+                      +(self.trans_vec[1]/1000)**2 \
+                      +(self.trans_vec[2]/1000)**2)
+
+        x = body_px[0]-self.c_x
+        y = body_px[1]-self.c_y
+
+        Z = self.f_x*d_x/(np.sqrt(x**2 + self.f_x**2))
+        X = x*Z/self.f_x
+        Y = y*Z/self.f_y
+        return [X, Y, Z]
+
 
     def make_jointstate(
             self,
@@ -546,22 +572,12 @@ class FullbodyDetector:
                 self.roi.x_offset,
                 self.roi.y_offset
             )
+        elif self.body_position_estimation[0]:
+            torso_res = self.body_position_estimation
         else:
             torso_res = np.array([0, 0, 0])
 
         ### Publishing tf transformations ###
-
-        self.tb.sendTransform(
-            (torso_res[0], 0.0, torso_res[2]),
-            tf.transformations.quaternion_from_euler(
-                np.pi/2,
-                -theta,
-                0
-            ),
-            header.stamp,
-            "body_%s" % body_id,
-            header.frame_id
-        )
 
         t = header.stamp.to_sec()
 
@@ -628,17 +644,44 @@ class FullbodyDetector:
                     self.body_vel_estimation_filtered[1]
                 self.speed_pub.publish(self.speed_msg)
 
-        if self.stickman_debug:
+        if not self.use_depth:
             self.tb.sendTransform(
-                (torso[0]+torso_res[2], torso[1]-torso_res[0], torso[2]),
+                (torso_res[0], 0.0, torso_res[2]),
                 tf.transformations.quaternion_from_euler(
-                    0,
-                    0,
-                    1.5*np.pi+theta
+                    np.pi/2,
+                    -theta,
+                    0
                 ),
                 header.stamp,
-                "mediapipe_torso",
-                "camera_link"
+                "body_%s" % body_id,
+                header.frame_id
+            )
+        else:
+            self.tb.sendTransform(
+                (self.body_filtered_position[1], 
+                    0.0, 
+                    self.body_filtered_position[0]),
+                tf.transformations.quaternion_from_euler(
+                    np.pi/2,
+                    -theta,
+                    0
+                ),
+                header.stamp,
+                "body_%s" % body_id,
+                header.frame_id
+            )
+
+        if self.stickman_debug:
+            self.tb.sendTransform(
+                (-torso[1]+torso_res[0], torso[2], torso[0]+torso_res[2]),
+                tf.transformations.quaternion_from_euler(
+                    np.pi/2,
+                    -theta,
+                    0
+                ),
+                header.stamp,
+                "mediapipe_torso_"+self.body_id,
+                header.frame_id
             )
             self.tb.sendTransform(
                 (0.0, 0.0, 0.605),
@@ -648,8 +691,8 @@ class FullbodyDetector:
                     0
                 ),
                 header.stamp,
-                "our_torso",
-                "mediapipe_torso"
+                "our_torso_"+self.body_id,
+                "mediapipe_torso_"+self.body_id
             )
             self.tb.sendTransform(
                 (l_shoulder[0], l_shoulder[1], l_shoulder[2]),
@@ -659,8 +702,8 @@ class FullbodyDetector:
                     0
                 ),
                 header.stamp,
-                "left_shoulder",
-                "our_torso"
+                "left_shoulder_"+self.body_id,
+                "our_torso_"+self.body_id
             )
             self.tb.sendTransform(
                 (r_shoulder[0], r_shoulder[1], r_shoulder[2]),
@@ -670,8 +713,8 @@ class FullbodyDetector:
                     0
                 ),
                 header.stamp,
-                "right_shoulder",
-                "our_torso"
+                "right_shoulder_"+self.body_id,
+                "our_torso_"+self.body_id
             )
             self.tb.sendTransform(
                 (l_elbow[0]-l_shoulder[0],
@@ -684,8 +727,8 @@ class FullbodyDetector:
                     0
                 ),
                 header.stamp,
-                "left_elbow",
-                "left_shoulder"
+                "left_elbow_"+self.body_id,
+                "left_shoulder_"+self.body_id
             )
             self.tb.sendTransform(
                 (r_elbow[0]-r_shoulder[0],
@@ -698,8 +741,8 @@ class FullbodyDetector:
                     0
                 ),
                 header.stamp,
-                "right_elbow",
-                "right_shoulder"
+                "right_elbow_"+self.body_id,
+                "right_shoulder_"+self.body_id
             )
             self.tb.sendTransform(
                 (l_wrist[0]-l_elbow[0],
@@ -711,8 +754,8 @@ class FullbodyDetector:
                     0
                 ),
                 header.stamp,
-                "left_wrist",
-                "left_elbow"
+                "left_wrist_"+self.body_id,
+                "left_elbow_"+self.body_id
             )
             self.tb.sendTransform(
                 (r_wrist[0]-r_elbow[0],
@@ -725,8 +768,8 @@ class FullbodyDetector:
                     0
                 ),
                 header.stamp,
-                "right_wrist",
-                "right_elbow"
+                "right_wrist_"+self.body_id,
+                "right_elbow_"+self.body_id
             )
             self.tb.sendTransform(
                 (l_ankle[0],
@@ -738,8 +781,8 @@ class FullbodyDetector:
                     0,
                     0),
                 header.stamp,
-                "left_ankle",
-                "mediapipe_torso"
+                "left_ankle_"+self.body_id,
+                "mediapipe_torso_"+self.body_id
             )
             self.tb.sendTransform(
                 (r_ankle[0],
@@ -752,8 +795,8 @@ class FullbodyDetector:
                     0
                 ),
                 header.stamp,
-                "right_ankle",
-                "mediapipe_torso"
+                "right_ankle_"+self.body_id,
+                "mediapipe_torso_"+self.body_id
             )
         js.position = compute_jointstate(
             self.ik_chains[body_id], 
@@ -763,46 +806,6 @@ class FullbodyDetector:
             r_wrist,
             r_ankle
         )
-
-        """
-        if self.use_depth:
-            nose_px = [pose_2d[0].get('x'), pose_2d[0].get('y')]
-            nose_px = _normalized_to_pixel_coordinates(
-                nose_px[0],
-                nose_px[1],
-                self.img_width,
-                self.img_height)
-            left_foot_px = [
-                pose_2d[31].get('x'),
-                pose_2d[31].get('y')]
-            left_foot_px = _normalized_to_pixel_coordinates(
-                left_foot_px[0],
-                left_foot_px[1],
-                self.img_width,
-                self.img_height)
-            nose_3d = rgb_to_xyz(
-                nose_px[0],
-                nose_px[1],
-                self.rgb_info,
-                self.depth_info,
-                self.image_depth,
-                self.x_offset,
-                self.y_offset)
-            left_foot_3d = rgb_to_xyz(
-                left_foot_px[0],
-                left_foot_px[1],
-                self.rgb_info,
-                self.depth_info,
-                self.image_depth,
-                self.x_offset,
-                self.y_offset)
-
-            ### [WiP] Height Estimation [WiP] ###
-            if pose_2d[0].get('visibility') > 0.85 and \
-                    pose_2d[31].get('visibility') > 0.85:
-                estimated_height = left_foot_3d[1] - nose_3d[1]
-            ### Work in Progress! ###
-        """
 
         return js
 
@@ -823,6 +826,7 @@ class FullbodyDetector:
         image_rgb = cv2.cvtColor(image_rgb, cv2.COLOR_BGR2RGB)
         results = self.detector.process(image_rgb)
         image_rgb.flags.writeable = True
+        self.image = image_rgb
 
         self.x_min_person = img_width
         self.y_min_person = img_height
@@ -853,6 +857,79 @@ class FullbodyDetector:
             self.y_max_person = int(max(
                 self.y_max_person, 
                 self.y_max_face))
+
+            if not self.use_depth:
+                for idx, landmark in enumerate(results.face_landmarks.landmark):
+                    if idx == 1:
+                        nose_tip = [landmark.x, landmark.y]
+                    if idx == 13:
+                        mouth_center = [landmark.x, landmark.y]
+                    if idx == 159:
+                        right_eye = [landmark.x, landmark.y]
+                    if idx == 234:
+                        right_ear_tragion = [landmark.x, landmark.y]
+                    if idx == 386:
+                        left_eye = [landmark.x, landmark.y]
+                    if idx == 454:
+                        left_ear_tragion = [landmark.x, landmark.y]
+
+                if hasattr(self, "K"):
+                    points_2D = np.array([
+                        _normalized_to_pixel_coordinates(
+                            nose_tip[0],
+                            nose_tip[1],
+                            self.img_width,
+                            self.img_height),
+                        _normalized_to_pixel_coordinates(
+                            right_eye[0],
+                            right_eye[1],
+                            self.img_width,
+                            self.img_height),
+                        _normalized_to_pixel_coordinates(
+                            left_eye[0],
+                            left_eye[1],
+                            self.img_width,
+                            self.img_height),
+                        _normalized_to_pixel_coordinates(
+                            mouth_center[0],
+                            mouth_center[1],
+                            self.img_width,
+                            self.img_height),
+                        _normalized_to_pixel_coordinates(
+                            right_ear_tragion[0],
+                            right_ear_tragion[1],
+                            self.img_width,
+                            self.img_height),
+                        _normalized_to_pixel_coordinates(
+                            left_eye[0],
+                            left_eye[1],
+                            self.img_width,
+                            self.img_height)], 
+                        dtype="double")
+
+                    self.trans_vec, self.angles = \
+                        face_pose_estimation(points_2D, self.K)
+
+                    self.tb.sendTransform(
+                        (self.trans_vec[0]/1000,
+                         self.trans_vec[1]/1000,
+                         self.trans_vec[2]/1000),
+                        tf.transformations.quaternion_from_euler(
+                            self.angles[0]/180*np.pi,
+                            self.angles[1]/180*np.pi,
+                            self.angles[2]/180*np.pi),
+                        rospy.Time.now(),
+                        "face_"+self.body_id,
+                        header.frame_id)
+                    self.tb.sendTransform(
+                        (0, 0, 0),
+                        tf.transformations.quaternion_from_euler(
+                            -np.pi/2,
+                            0,
+                            -np.pi/2),
+                        rospy.Time.now(),
+                        "gaze_"+self.body_id,
+                        "face_"+self.body_id)
 
             # Since I create this structure starting from a face,
             # then I can just publish the body if I need.
@@ -934,6 +1011,9 @@ class FullbodyDetector:
             pose_kpt = pose_keypoints.get('landmark')
             pose_world_kpt = pose_world_keypoints.get('landmark')
             skel_msg = _make_2d_skeleton_msg(header, pose_kpt)
+            if self.trans_vec[0] and not self.use_depth:
+                self.body_position_estimation = \
+                    self.face_to_body_position_estimation(skel_msg)
             js = self.make_jointstate(
                 self.body_id,
                 pose_world_kpt,
@@ -971,6 +1051,13 @@ class FullbodyDetector:
 
         if self.single_body:
             ids_list = IdsList()
+            if(self.textual_debug):
+                rospy.loginfo("Detected body_%s, ROI = [%s, %s, %s, %s]", \
+                    self.body_id, 
+                    str(self.x_min_person), 
+                    str(self.y_min_person),
+                    str(self.x_max_person-self.x_min_person),
+                    str(self.y_max_person-self.y_min_person))
             if self.x_min_person < self.x_max_person \
                 and self.y_min_person < self.y_max_person:
                 self.x_min_person = max(0, self.x_min_person)
@@ -1036,14 +1123,15 @@ class FullbodyDetector:
     def image_callback_rgb(self, rgb_img, rgb_info):
 
         if not rospy.has_param(self.human_description):
-            print('URDF file NOT found', self.human_description)
+            rospy.logerr('URDF file NOT found', self.human_description)
             rosparam.set_param_raw(self.human_description, self.urdf)
             return
-        else:
-            print('URDF file found', self.human_description)
-
+        
         rgb_img = self.br.imgmsg_to_cv2(rgb_img)        
 
         header = copy.copy(rgb_info.header)
         self.rgb_info = rgb_info
         self.detect(rgb_img, header)
+
+    def get_image_topic(self):
+        return self.image_subscriber.sub.resolved_name
