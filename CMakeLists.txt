@@ -8,6 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
   human_description
   std_msgs
   geometry_msgs
+  image_geometry
 )
 
 catkin_python_setup()
