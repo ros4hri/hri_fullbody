@@ -19,6 +19,12 @@
          properly align the joints' frames to the kinematci model of the human -->
     <arg name="stickman_debug" default="False"/>
 
+     <!-- 
+      If 'single_body' is False, hri_fullbody waits for bodies Region of Interests to be published on /humans/bodies/xxx/roi, and it uses those RoIs to perform 3D skeleton estimation.
+      If 'single_body' is True, the node will not use external body detections, and instead will detect *a single* person, and provide the RoI + 3D skeleton of that person.
+    -->
+    <arg name="single_body" default="False"/>
+
     <include file="$(find hri_fullbody)/launch/hri_fullbody.launch" pass_all_args="true" />
 
     <node name="usb_cam" pkg="usb_cam" type="usb_cam_node">
