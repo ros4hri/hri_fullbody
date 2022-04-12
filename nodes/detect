@@ -75,7 +75,7 @@ class MultibodyManager:
                 )
                 rospy.loginfo("Generated single person detector for body_%s", id)
                 rospy.loginfo("Waiting for frames on topic %s", \
-                    current_bodies[id].get_image_topic())
+                    current_bodies[id][0].get_image_topic())
 
         for id in self.detected_bodies:
             if not id in current_bodies:
