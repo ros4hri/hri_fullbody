@@ -1,47 +1,27 @@
 #!/usr/bin/env python3
 
-"""hri_fullbody detection: multipeople 3D pose estimation
-   from RGB images. Part of ROS4HRI. 
-
-   Inputs:
-   - /humans/bodies/tracked as hri_msgs/IdsList.msg
-   - /humans/bodies/<body_id>/roi as sensor_msgs/RegionOfInterest.msg
-   - /humans/bodies/<body_id>/crop as sensor_msgs/Image.msg
-   - /camera/depth/image_rect as sensor_msgs/Image.msg
-
-   Outputs:
-   - /human_<body_id>/jointstate as ...
-   - /human/faces/tracked as hri_msgs/IdsList
-   - /human/faces/<face_id>/roi as sensor_msgs/RegionOfInterest.msg
-   - /human/faces/<face_id>/crop as sensor_msgs/Image.msg"""
-
-import cv2
 import rospy
-import rosparam
-from sensor_msgs.msg import Image, RegionOfInterest
-from cv_bridge import CvBridge
-import copy
-import numpy as np
 from hri_fullbody.fullbody_detector import FullbodyDetector
-import uuid
+import random
 from hri_msgs.msg import IdsList
 
 
 def generate_id():
-    return str(uuid.uuid4())[:5]  # for a 5 char long ID
+    """ This function generates a 5 chars ID. 
+        To avoid misenterpretation of the ID as an exponential 
+        number, the 'e' letter is not in the pool."""
 
-
-# Parameter [human_description_ebe80] does not exist, and was not found by searchParam()
-
+    return "".join(random.sample("abcdf0123456789",5))
 
 class MultibodyManager:
-    def __init__(self, use_depth, visual_debug, textual_debug, stickman_debug, max_age):
+    
+    def __init__(
+        self, 
+        use_depth, 
+        stickman_debug):
 
         self.use_depth = use_depth
-        self.visual_debug = visual_debug
-        self.textual_debug = textual_debug
         self.stickman_debug = stickman_debug
-        self.max_age = max_age
 
         # Dictionary for the detected people
         self.detected_bodies = {}
@@ -53,8 +33,6 @@ class MultibodyManager:
             "/humans/bodies/tracked", IdsList, self.ids_list_cb, queue_size=1
         )
 
-        self.forbidden_ids = []
-
     def ids_list_cb(self, msg):
 
         current_bodies = {}
@@ -62,17 +40,18 @@ class MultibodyManager:
         for id in msg.ids:
             if id in self.detected_bodies:
                 current_bodies[id] = (self.detected_bodies[id][0], 0)
-            elif not id in self.forbidden_ids:
+            else:
                 current_bodies[id] = (
                     FullbodyDetector(
                         self.use_depth,
-                        self.visual_debug,
-                        self.textual_debug,
                         self.stickman_debug,
                         id,
                     ),
-                    0,
+                    0
                 )
+                rospy.loginfo("Generated single person detector for body_%s", id)
+                rospy.loginfo("Waiting for frames on topic %s", \
+                    current_bodies[id][0].get_image_topic())
 
         for id in self.detected_bodies:
             if not id in current_bodies:
@@ -83,15 +62,36 @@ class MultibodyManager:
 
 if __name__ == "__main__":
 
-    rospy.init_node("multibody_manager", anonymous=True)
+    rospy.init_node("fullbody_manager", anonymous=True)
 
     use_depth = rospy.get_param("~use_depth", False)
-    visual_debug = rospy.get_param("~visual_debug", False)
-    textual_debug = rospy.get_param("~textual_debug", False)
     stickman_debug = rospy.get_param("~stickman_debug", False)
-    max_age = 30
+    single_body = rospy.get_param("~single_body", True)
+    manager = None
 
-    manager = MultibodyManager(
-        use_depth, visual_debug, textual_debug, stickman_debug, max_age
-    )
+    rospy.loginfo("Using depth camera for body position estimation: %s", \
+     str(use_depth))
+    if single_body:
+        rospy.loginfo("Setting up for single body pose estimation")
+    else:
+        rospy.loginfo("Setting up for multibody pose estimation")
+
+    if not single_body:
+        manager = MultibodyManager(
+            use_depth, 
+            stickman_debug)
+        rospy.loginfo("Waiting for ids on /humans/bodies/tracked")
+    else:
+        rospy.logwarn("hri_fullbody running in single body mode:"+\
+                      " only one skeleton will be detected")
+        id = generate_id()
+        current_body = FullbodyDetector(
+            use_depth,
+            stickman_debug,
+            id,
+            single_body)
+        rospy.loginfo("Generated single person detector for body_%s", id)
+        rospy.loginfo("Waiting for frames on topic %s", \
+            current_body.get_image_topic())
+
     rospy.spin()

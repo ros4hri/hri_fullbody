@@ -11,13 +11,14 @@
   <buildtool_depend>catkin</buildtool_depend>
   <exec_depend>rospy</exec_depend>
   <depend>python-mediapipe</depend>
-  <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>hri_msgs</depend>
   <depend>human_description</depend>
+  <depend>image_geometry</depend>
   <exec_depend>rosconsole</exec_depend>
   <exec_depend>tf</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->
