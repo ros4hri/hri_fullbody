@@ -2,8 +2,8 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.0 (2022-08-02)
+------------------
 * Body position estimation without accessing depth information
 * clean up launch files
 * multibody depth detection
