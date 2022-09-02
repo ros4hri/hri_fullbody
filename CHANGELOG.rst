@@ -2,6 +2,11 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* update to hri_msgs-0.8.0
+* Contributors: Séverin Lemaignan
+
 0.1.0 (2022-08-02)
 ------------------
 * Body position estimation without accessing depth information
