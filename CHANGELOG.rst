@@ -2,8 +2,8 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.2 (2022-09-02)
+------------------
 * update to hri_msgs-0.8.0
 * Contributors: Séverin Lemaignan
 
