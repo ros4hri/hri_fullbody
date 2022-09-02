@@ -20,7 +20,7 @@ import tf
 
 from sensor_msgs.msg import Image, CameraInfo, RegionOfInterest
 from sensor_msgs.msg import JointState
-from hri_msgs.msg import Skeleton2D, PointOfInterest2D, IdsList
+from hri_msgs.msg import Skeleton2D, NormalizedPointOfInterest2D, IdsList
 from message_filters import ApproximateTimeSynchronizer, Subscriber
 from geometry_msgs.msg import TwistStamped, PointStamped
 
@@ -121,7 +121,7 @@ def _make_2d_skeleton_msg(header, pose_2d):
 
     for idx, human_joint in enumerate(ros4hri_to_mediapipe):
         if human_joint is not None:
-            skel.skeleton[idx] = PointOfInterest2D(
+            skel.skeleton[idx] = NormalizedPointOfInterest2D(
                 x=pose_2d[human_joint].get('x'),
                 y=pose_2d[human_joint].get('y'),
                 c=pose_2d[human_joint].get('visibility'))
@@ -129,7 +129,7 @@ def _make_2d_skeleton_msg(header, pose_2d):
     # There is no Neck landmark in Mediapipe pose estimation
     # However, we can think of the neck point as the average
     # point between left and right shoulder.
-    skel.skeleton[Skeleton2D.NECK] = PointOfInterest2D(
+    skel.skeleton[Skeleton2D.NECK] = NormalizedPointOfInterest2D(
         (
             skel.skeleton[Skeleton2D.LEFT_SHOULDER].x
             + skel.skeleton[Skeleton2D.RIGHT_SHOULDER].x
@@ -978,7 +978,7 @@ class FullbodyDetector:
             pose_kpt = pose_keypoints.get('landmark')
             landmarks = [None] * 21
             for i in range(0, 21):
-                landmarks[i] = PointOfInterest2D(
+                landmarks[i] = NormalizedPointOfInterest2D(
                     pose_kpt[i].get('x'),
                     pose_kpt[i].get('y'),
                     pose_kpt[i].get('visibility')
@@ -1007,7 +1007,7 @@ class FullbodyDetector:
             pose_kpt = pose_keypoints.get('landmark')
             landmarks = [None] * 21
             for i in range(0, 21):
-                landmarks[i] = PointOfInterest2D(
+                landmarks[i] = NormalizedPointOfInterest2D(
                     pose_kpt[i].get('x'),
                     pose_kpt[i].get('y'),
                     pose_kpt[i].get('visibility')
@@ -1059,7 +1059,7 @@ class FullbodyDetector:
             if self.single_body:
                 landmarks = [None]*32
                 for i in range(0, 32):
-                    landmarks[i] = PointOfInterest2D(
+                    landmarks[i] = NormalizedPointOfInterest2D(
                     pose_kpt[i].get('x'),
                     pose_kpt[i].get('y'),
                     pose_kpt[i].get('visibility')
