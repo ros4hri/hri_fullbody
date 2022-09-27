@@ -2,8 +2,8 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.3 (2022-09-27)
+------------------
 * add dependency on ikpy 3.2.2
 * Contributors: Séverin Lemaignan
 
