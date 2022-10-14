@@ -11,7 +11,7 @@ def generate_id():
     To avoid misenterpretation of the ID as an exponential
     number, the 'e' letter is not in the pool."""
 
-    return "".join(random.sample("abcdf0123456789", 5))
+    return "".join(random.sample("abcdefghijklmnopqrstuvwxyz", 5))
 
 
 class MultibodyManager:
