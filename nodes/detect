@@ -7,18 +7,15 @@ from hri_msgs.msg import IdsList
 
 
 def generate_id():
-    """ This function generates a 5 chars ID. 
-        To avoid misenterpretation of the ID as an exponential 
-        number, the 'e' letter is not in the pool."""
+    """This function generates a 5 chars ID.
+    To avoid misenterpretation of the ID as an exponential
+    number, the 'e' letter is not in the pool."""
 
-    return "".join(random.sample("abcdf0123456789",5))
+    return "".join(random.sample("abcdf0123456789", 5))
+
 
 class MultibodyManager:
-    
-    def __init__(
-        self, 
-        use_depth, 
-        stickman_debug):
+    def __init__(self, use_depth, stickman_debug):
 
         self.use_depth = use_depth
         self.stickman_debug = stickman_debug
@@ -47,11 +44,13 @@ class MultibodyManager:
                         self.stickman_debug,
                         id,
                     ),
-                    0
+                    0,
                 )
                 rospy.loginfo("Generated single person detector for body_%s", id)
-                rospy.loginfo("Waiting for frames on topic %s", \
-                    current_bodies[id][0].get_image_topic())
+                rospy.loginfo(
+                    "Waiting for frames on topic %s",
+                    current_bodies[id][0].get_image_topic(),
+                )
 
         for id in self.detected_bodies:
             if not id in current_bodies:
@@ -69,29 +68,23 @@ if __name__ == "__main__":
     single_body = rospy.get_param("~single_body", True)
     manager = None
 
-    rospy.loginfo("Using depth camera for body position estimation: %s", \
-     str(use_depth))
+    rospy.loginfo("Using depth camera for body position estimation: %s", str(use_depth))
     if single_body:
         rospy.loginfo("Setting up for single body pose estimation")
     else:
         rospy.loginfo("Setting up for multibody pose estimation")
 
     if not single_body:
-        manager = MultibodyManager(
-            use_depth, 
-            stickman_debug)
+        manager = MultibodyManager(use_depth, stickman_debug)
         rospy.loginfo("Waiting for ids on /humans/bodies/tracked")
     else:
-        rospy.logwarn("hri_fullbody running in single body mode:"+\
-                      " only one skeleton will be detected")
+        rospy.logwarn(
+            "hri_fullbody running in single body mode:"
+            + " only one skeleton will be detected"
+        )
         id = generate_id()
-        current_body = FullbodyDetector(
-            use_depth,
-            stickman_debug,
-            id,
-            single_body)
+        current_body = FullbodyDetector(use_depth, stickman_debug, id, single_body)
         rospy.loginfo("Generated single person detector for body_%s", id)
-        rospy.loginfo("Waiting for frames on topic %s", \
-            current_body.get_image_topic())
+        rospy.loginfo("Waiting for frames on topic %s", current_body.get_image_topic())
 
     rospy.spin()
