@@ -8,7 +8,8 @@
     <arg name="depth_camera" default="/camera/depth/"/>
     <arg name="depth_camera_topic" default="$(arg depth_camera)/image_rect_raw"/>
     <arg name="depth_camera_info" default="$(arg depth_camera)/camera_info"/>
-
+    <arg name="min_detection" default="0.7"/>
+    <arg name="min_tracking" default="0.7"/>
     <!-- publishes a TF tree of the joints, *without* performing IK kinematics to
          properly align the joints frames to the kinematic model of the human -->
     <arg name="stickman_debug" default="False"/>
@@ -24,6 +25,8 @@
         <param name="use_depth" value="$(arg use_depth)"/>
         <param name="stickman_debug" value="$(arg stickman_debug)"/>
         <param name="single_body" value="$(arg single_body)"/>
+        <param name="min_detection" value="$(arg min_detection)"/>
+        <param name="min_tracking" value="$(arg min_tracking)"/>
 
         <remap from="/image" to="$(arg rgb_camera_topic)"/>
         <remap from="/camera_info" to="$(arg rgb_camera_info)"/>
