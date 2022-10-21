@@ -113,7 +113,7 @@ points published by the node.
 
 #### Published topics
 
-- `/humans/bodies/<body_id>/skeleton`
+- `/humans/bodies/<body_id>/skeleton2d`
   ([hri_msgs/Skeleton2D](http://docs.ros.org/en/api/hri_msgs/html/msg/Skeleton2D.html)):
   detected 2D skeleton points.
 - `/humans/bodies/<body_id>/joint_states`

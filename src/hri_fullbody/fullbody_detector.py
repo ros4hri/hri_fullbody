@@ -206,7 +206,7 @@ class FullbodyDetector:
         self.valid_trans_vec = False
 
         self.js_topic = "/humans/bodies/" + body_id + "/joint_states"
-        skel_topic = "/humans/bodies/" + body_id + "/skeleton"
+        skel_topic = "/humans/bodies/" + body_id + "/skeleton2d"
 
         self.skel_pub = rospy.Publisher(
             skel_topic, Skeleton2D, queue_size=1)
