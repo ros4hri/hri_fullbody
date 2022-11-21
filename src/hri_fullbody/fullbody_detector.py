@@ -204,6 +204,7 @@ class FullbodyDetector:
         # between the camera optical frame and the face frame. 
         self.trans_vec = [None] * 3
         self.valid_trans_vec = False
+        self.calibrated_camera = False
 
         self.js_topic = "/humans/bodies/" + body_id + "/joint_states"
         skel_topic = "/humans/bodies/" + body_id + "/skeleton2d"
@@ -436,6 +437,14 @@ class FullbodyDetector:
             self.f_y = self.K[1][1]
             self.c_x = self.K[0][2]
             self.c_y = self.K[1][2]
+
+            self.calibrated_camera = np.any(self.K)
+            if not self.calibrated_camera:
+                rospy.logwarn("The RGB camera intrinsic "+\
+                    "matrix elements are all zeros. "+\
+                    "The RGB camera might not be calibrated. "+\
+                    "Body depth estimation based on RGB data "+\
+                    "will not be possible.")
 
             self.image_info_sub.unregister()
 
@@ -943,7 +952,11 @@ class FullbodyDetector:
                 elif np.isnan(self.trans_vec[0]) \
                   or np.isnan(self.trans_vec[1]) \
                   or np.isnan(self.trans_vec[2]):
-                    self.valid_trans_vec = False
+                    if not self.calibrated_camera:
+                        self.trans_vec = np.zeros(3)
+                        self.valid_trans_vec = True
+                    else:
+                        self.valid_trans_vec = False
                 else:
                     self.valid_trans_vec = True
 
@@ -1042,10 +1055,15 @@ class FullbodyDetector:
             pose_kpt = pose_keypoints.get('landmark')
             pose_world_kpt = pose_world_keypoints.get('landmark')
             skel_msg = _make_2d_skeleton_msg(header, pose_kpt)
-            if self.valid_trans_vec and not self.use_depth:
+            if self.valid_trans_vec and not self.use_depth\
+              and self.calibrated_camera:
                 self.body_position_estimation = \
                     self.face_to_body_position_estimation(skel_msg)
-            elif not self.valid_trans_vec and not self.use_depth:
+            elif self.valid_trans_vec and not self.use_depth\
+              and not self.calibrated_camera:
+                self.body_position_estimation = [0, 0, 0]
+            elif not self.valid_trans_vec and not self.use_depth \
+              and self.calibrated_camera:
                 rospy.logerr("It was not possible to estimate body position.")
             if self.use_depth or self.valid_trans_vec:
                 js = self.make_jointstate(

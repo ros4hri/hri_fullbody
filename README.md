@@ -32,7 +32,12 @@ and then to run body pose estimation for each one of these images.
 
 To estimate the body position, the node does not need a RGB-D camera,
 only RGB is required. However, using RGB-D camera provides a more 
-accurate depth estimation.   
+accurate depth estimation.
+
+**Important**: to estimate the body depth without using a depth sensor, 
+a calibrated RGB camera is required. 
+You can follow [this tutorial](http://wiki.ros.org/camera_calibration/Tutorials/MonocularCalibration)
+to properly calibrate your camera.
 
 Launch
 ------
