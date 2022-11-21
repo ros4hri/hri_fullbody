@@ -175,7 +175,7 @@ class FullbodyDetector:
                  use_depth,
                  stickman_debug,
                  body_id,
-                 single_body = False, min_detection=0.7):
+                 single_body = False):
 
         self.use_depth = use_depth
         self.stickman_debug = stickman_debug
@@ -184,7 +184,7 @@ class FullbodyDetector:
         self.skeleton_to_set = single_body
 
         self.detector = mp_holistic.Holistic(
-            min_detection_confidence=min_detection, static_image_mode=True)
+            min_detection_confidence=0.5, min_tracking_confidence=0.5)
 
         self.from_depth_image = False
 
