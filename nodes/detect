@@ -18,12 +18,10 @@ class MultibodyManager:
     def __init__(
         self, 
         use_depth, 
-        stickman_debug,
-        min_detection):
+        stickman_debug):
 
         self.use_depth = use_depth
         self.stickman_debug = stickman_debug
-        self.min_detection = min_detection
 
         # Dictionary for the detected people
         self.detected_bodies = {}
@@ -48,7 +46,6 @@ class MultibodyManager:
                         self.use_depth,
                         self.stickman_debug,
                         id,
-                        self.min_detection
                     ),
                     0,
                 )
@@ -72,7 +69,6 @@ if __name__ == "__main__":
     use_depth = rospy.get_param("~use_depth", False)
     stickman_debug = rospy.get_param("~stickman_debug", False)
     single_body = rospy.get_param("~single_body", True)
-    min_detection = rospy.get_param("~min_detection", 0.7)
     manager = None
 
     rospy.loginfo("Using depth camera for body position estimation: %s", str(use_depth))
@@ -84,8 +80,7 @@ if __name__ == "__main__":
     if not single_body:
         manager = MultibodyManager(
             use_depth, 
-            stickman_debug,
-            min_detection)
+            stickman_debug)
         rospy.loginfo("Waiting for ids on /humans/bodies/tracked")
     else:
         rospy.logwarn(
@@ -97,8 +92,7 @@ if __name__ == "__main__":
             use_depth,
             stickman_debug,
             id,
-            single_body,
-            min_detection)
+            single_body)
         rospy.loginfo("Generated single person detector for body_%s", id)
         rospy.loginfo("Waiting for frames on topic %s", current_body.get_image_topic())
 
