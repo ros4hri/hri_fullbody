@@ -2,6 +2,45 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Merge branch 'devel' into 'master'
+  Revert "have threshold params"
+  See merge request ros4hri/hri_fullbody!7
+* Merge branch 'master' into 'devel'
+  # Conflicts:
+  #   src/hri_fullbody/fullbody_detector.py
+* Revert "have threshold params"
+  This reverts commit 78264248652879a1b572397e8edeee6202685bc6
+  and commit 5cc5c34f7a93f8030623ff78945095778374cd36.
+* Merge branch 'devel' into 'master'
+  Introduced requirements.txt
+  See merge request ros4hri/hri_fullbody!6
+* Merge branch 'uncalibrated_monocular_camera' into 'master'
+  Correctly managing uncalibrated camera
+  See merge request ros4hri/hri_fullbody!5
+* Introduced requirements.txt
+  Introduced requirements.txt. Currently, the only requirement
+  specified is ikpy. Using the requirements.txt file syntax,
+  it was possible to specify the requested version, that is,
+  3.2.2
+* Enabled human jointstate estimation for uncalibrated RGB cameras
+  It was previously not possible to estimate human joint angles
+  when the RGB camera was not calibrated. Additionally, the node
+  is now displaying a warning message when the received camera
+  intrinsic matrix has all zero values, which usually means that
+  it needs to be calibrated.
+* [Doc] Specified camera calibration requirement
+  It is now specified in the README.md file that camera calibration
+  is required to estimate body depth without using a depth sensor.
+* REP-155 compliance: skeleton must be published on /skeleton2d topic
+* Merge branch 'master' of gitlab:ros4hri/hri_fullbody
+* have threshold params
+* have threshold params
+* generate only letter-based IDs (for consistency with other nodes)
+* code formatting
+* Contributors: Séverin Lemaignan, lorenzoferrini, saracooper
+
 0.1.3 (2022-09-27)
 ------------------
 * add dependency on ikpy 3.2.2
