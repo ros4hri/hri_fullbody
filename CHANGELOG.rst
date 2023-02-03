@@ -2,8 +2,8 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.4 (2023-02-03)
+------------------
 * Merge branch 'devel' into 'master'
   Revert "have threshold params"
   See merge request ros4hri/hri_fullbody!7
