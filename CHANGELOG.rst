@@ -2,6 +2,13 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* ensure mediapipe can not be called from 2 threads in parallel
+  This would cause internal mediapipe errors related to non-monotonic
+  timestamps
+* Contributors: Séverin Lemaignan
+
 0.1.4 (2023-02-03)
 ------------------
 * Merge branch 'devel' into 'master'
