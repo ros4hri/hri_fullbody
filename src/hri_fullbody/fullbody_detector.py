@@ -13,6 +13,7 @@ import numpy as np
 import sys
 import copy
 import subprocess
+import threading
 
 import rosparam
 import rospy
@@ -185,6 +186,10 @@ class FullbodyDetector:
 
         self.detector = mp_holistic.Holistic(
             min_detection_confidence=0.5, min_tracking_confidence=0.5)
+
+        self.processing_lock = threading.Lock()
+        self.skipped_images = 0
+        self.start_skipping_ts = rospy.Time.now()
 
         self.from_depth_image = False
 
@@ -853,12 +858,24 @@ class FullbodyDetector:
 
     def detect(self, image_rgb, header):
 
+        if self.processing_lock.locked():
+            self.skipped_images += 1
+            if self.skipped_images > 100:
+                rospy.logwarn("hri_fullbody's mediapipe processing too slow. Skipped 100 new incoming image over the last %.1fsecs" % (rospy.Time.now()-self.start_skipping_ts).to_sec())
+                self.start_skipping_ts = rospy.Time.now()
+                self.skipped_images = 0
+            return
+        self.processing_lock.acquire()
+
         img_height, img_width, _ = image_rgb.shape
         self.img_height, self.img_width = img_height, img_width
 
         image_rgb.flags.writeable = False
         image_rgb = cv2.cvtColor(image_rgb, cv2.COLOR_BGR2RGB)
+
         results = self.detector.process(image_rgb)
+        self.processing_lock.release()
+
         image_rgb.flags.writeable = True
         self.image = image_rgb
 
