@@ -4,7 +4,11 @@ import rospy
 from hri_fullbody.fullbody_detector import FullbodyDetector
 import random
 from hri_msgs.msg import IdsList
+from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus, KeyValue
+from collections import OrderedDict
 
+# body detection processing time in ms triggering a diagnostic warning
+BODY_DETECTION_PROC_TIME_WARN = 1000.
 
 def generate_id():
     """This function generates a 5 chars ID.
@@ -12,54 +16,94 @@ def generate_id():
 
     return "".join(random.sample("abcdefghijklmnopqrstuvwxyz", 5))
 
-
 class MultibodyManager:
     
     def __init__(
         self, 
+        single_body, 
         use_depth, 
         stickman_debug):
 
+        self.single_body = single_body
         self.use_depth = use_depth
         self.stickman_debug = stickman_debug
 
         # Dictionary for the detected people
-        self.detected_bodies = {}
-        # id = uni
-        # self.detected_bodies[id][0] = personal id
+        self.detected_bodies = OrderedDict()
+        # id = unique body ID
+        # self.detected_bodies[id] = FullbodyDetector() for unique body ID
 
-        # Subscriber for the list of detected bodies
-        self.bodies_list_sub = rospy.Subscriber(
-            "/humans/bodies/tracked", IdsList, self.ids_list_cb, queue_size=1
-        )
+        if single_body:
+            rospy.logwarn(
+                "hri_fullbody running in single body mode:"
+                + " only one skeleton will be detected"
+            )
+            id = generate_id()
+            self.detected_bodies[id] = FullbodyDetector(use_depth, 
+                                                        stickman_debug, 
+                                                        id, 
+                                                        single_body)
+            rospy.loginfo("Generated single person detector for body_%s", id)
+            rospy.loginfo("Waiting for frames on topic %s", self.detected_bodies[id].get_image_topic())
+        else:
+            rospy.loginfo("Waiting for ids on /humans/bodies/tracked")
+            # Subscriber for the list of detected bodies
+            self.bodies_list_sub = rospy.Subscriber(
+                "/humans/bodies/tracked", IdsList, self.ids_list_cb, queue_size=1
+            )
+
+        diag_period = rospy.get_param("~diagnostic_period", 1)
+        self.diag_timer = rospy.Timer(rospy.Duration(diag_period), self.do_diagnostics)
+        self.diag_pub = rospy.Publisher("/diagnostics", DiagnosticArray, queue_size=1)
 
     def ids_list_cb(self, msg):
 
-        current_bodies = {}
-
         for id in msg.ids:
-            if id in self.detected_bodies:
-                current_bodies[id] = (self.detected_bodies[id][0], 0)
-            else:
-                current_bodies[id] = (
-                    FullbodyDetector(
-                        self.use_depth,
-                        self.stickman_debug,
-                        id,
-                    ),
-                    0,
-                )
+            if id not in self.detected_bodies:
+                self.detected_bodies[id] = FullbodyDetector(self.use_depth, 
+                                                            self.stickman_debug, 
+                                                            id)
                 rospy.loginfo("Generated single person detector for body_%s", id)
                 rospy.loginfo(
                     "Waiting for frames on topic %s",
-                    current_bodies[id][0].get_image_topic(),
+                    self.detected_bodies[id].get_image_topic(),
                 )
 
         for id in self.detected_bodies:
-            if not id in current_bodies:
-                self.detected_bodies[id][0].unregister()
+            if not id in msg.ids:
+                self.detected_bodies[id].unregister()
+                self.detected_bodies.pop(id)
 
-        self.detected_bodies = current_bodies
+    def do_diagnostics(self, event=None):
+
+        arr = DiagnosticArray()
+        arr.header.stamp = rospy.Time.now()
+
+        proc_time = sum(v.get_proc_time() for v in self.detected_bodies.values())
+
+        msg = DiagnosticStatus(name="Social perception: Body analysis: Skeleton extraction", hardware_id="none")
+        
+        if any(v.check_timeout() for v in self.detected_bodies.values()):
+            msg.level = DiagnosticStatus.ERROR
+            msg.message = "Body detection process not responding"
+        elif proc_time > BODY_DETECTION_PROC_TIME_WARN:
+            msg.level = DiagnosticStatus.WARN
+            msg.message = "Body detection processing is slow"
+        else:
+            msg.level = DiagnosticStatus.OK
+                                
+        msg.values = [
+            KeyValue(key="Package name", value='hri_fullbody'),
+            KeyValue(key="Single body detector mode", value=str(self.single_body)),
+            KeyValue(key="Currently detected bodies", 
+                     value=str(sum([v.is_body_detected for v in self.detected_bodies.values()]))),
+            KeyValue(key="Last detected body ID", value=str(next(reversed(self.detected_bodies)))),
+            KeyValue(key="Detection processing time",
+                     value="{:.2f}".format(proc_time * 1000) + "ms"),
+        ]
+
+        arr.status = [msg]
+        self.diag_pub.publish(arr)
 
 
 if __name__ == "__main__":
@@ -77,23 +121,9 @@ if __name__ == "__main__":
     else:
         rospy.loginfo("Setting up for multibody pose estimation")
 
-    if not single_body:
-        manager = MultibodyManager(
-            use_depth, 
-            stickman_debug)
-        rospy.loginfo("Waiting for ids on /humans/bodies/tracked")
-    else:
-        rospy.logwarn(
-            "hri_fullbody running in single body mode:"
-            + " only one skeleton will be detected"
-        )
-        id = generate_id()
-        current_body = FullbodyDetector(
-            use_depth,
-            stickman_debug,
-            id,
-            single_body)
-        rospy.loginfo("Generated single person detector for body_%s", id)
-        rospy.loginfo("Waiting for frames on topic %s", current_body.get_image_topic())
+    manager = MultibodyManager(
+        single_body, 
+        use_depth, 
+        stickman_debug)
 
     rospy.spin()

@@ -20,6 +20,7 @@
   <exec_depend>rosconsole</exec_depend>
   <exec_depend>tf</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>diagnostic_msgs</exec_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->
