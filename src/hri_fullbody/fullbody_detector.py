@@ -104,6 +104,9 @@ FM_RIGHT_EAR_TRAGION = 234
 FM_LEFT_EYE = 386 
 FM_LEFT_EAR_TRAGION = 454
 
+# body detection processing time in ms signalling a timeout error
+BODY_DETECTION_PROC_TIMEOUT_ERROR = 5000.
+
 
 def _normalized_to_pixel_coordinates(
         normalized_x: float, normalized_y: float, image_width: int,
@@ -190,8 +193,12 @@ class FullbodyDetector:
         self.processing_lock = threading.Lock()
         self.skipped_images = 0
         self.start_skipping_ts = rospy.Time.now()
+        self.detection_start_proc_time = rospy.Time()
+        self.detection_proc_duration = 0.
 
         self.from_depth_image = False
+
+        self.is_body_detected = False
 
         self.x_min_face = 1.00
         self.y_min_face = 1.00
@@ -866,6 +873,7 @@ class FullbodyDetector:
                 self.skipped_images = 0
             return
         self.processing_lock.acquire()
+        self.detection_start_proc_time = rospy.Time.now()
 
         img_height, img_width, _ = image_rgb.shape
         self.img_height, self.img_width = img_height, img_width
@@ -1116,7 +1124,11 @@ class FullbodyDetector:
                     self.x_max_body))
                 self.y_max_person = int(max(
                     self.y_max_person, 
-                    self.y_max_body))
+                    self.y_max_body))                
+            self.is_body_detected = True
+        else:
+            self.is_body_detected = False
+
 
         if self.single_body:
             ids_list = IdsList()
@@ -1134,6 +1146,9 @@ class FullbodyDetector:
                 roi.height = self.y_max_person - self.y_min_person
                 self.roi_pub.publish(roi)
             self.ids_pub.publish(ids_list)
+
+        self.detection_proc_duration = (rospy.Time.now() - self.detection_start_proc_time).to_sec()
+
 
         ########################################
 
@@ -1204,3 +1219,9 @@ class FullbodyDetector:
 
     def get_image_topic(self):
         return self.image_subscriber.sub.resolved_name
+
+    def check_timeout(self):
+        return ((rospy.Time.now() - self.detection_start_proc_time).to_sec() > BODY_DETECTION_PROC_TIMEOUT_ERROR and
+                self.processing_lock.locked())
+    def get_proc_time(self):
+        return self.detection_proc_duration
