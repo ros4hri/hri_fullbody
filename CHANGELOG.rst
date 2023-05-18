@@ -2,8 +2,8 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.7 (2023-05-18)
+------------------
 * diagnostic_msgs: exec_depend -> depend
 * Contributors: Séverin Lemaignan
 
