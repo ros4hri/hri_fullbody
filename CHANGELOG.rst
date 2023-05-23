@@ -2,6 +2,12 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* disable publishing of face_XXX and gaze_XXX frames
+  See comment in code for rationale
+* Contributors: Séverin Lemaignan
+
 0.1.7 (2023-05-18)
 ------------------
 * diagnostic_msgs: exec_depend -> depend
