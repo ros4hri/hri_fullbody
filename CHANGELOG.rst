@@ -2,8 +2,8 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.8 (2023-05-23)
+------------------
 * disable publishing of face_XXX and gaze_XXX frames
   See comment in code for rationale
 * Contributors: Séverin Lemaignan
