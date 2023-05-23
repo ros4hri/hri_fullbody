@@ -187,6 +187,12 @@ class FullbodyDetector:
         self.multi_body = not single_body
         self.skeleton_to_set = single_body
 
+        # enable broadcasting of /face_XXX and /gaze_XXX
+        # TODO: currently disabled because:
+        #   1. it does not currently publish detected faces on /humans/faces/tracked
+        #   2. it conflicts with hri_face_detect
+        self.publish_face = False
+
         self.detector = mp_holistic.Holistic(
             min_detection_confidence=0.5, min_tracking_confidence=0.5)
 
@@ -985,7 +991,7 @@ class FullbodyDetector:
                 else:
                     self.valid_trans_vec = True
 
-                if self.valid_trans_vec:
+                if self.publish_face and self.valid_trans_vec:
                     self.tb.sendTransform(
                         (self.trans_vec[0]/1000,
                          self.trans_vec[1]/1000,
