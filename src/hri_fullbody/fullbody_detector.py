@@ -958,8 +958,8 @@ class FullbodyDetector:
                         self.img_width,
                         self.img_height),
                     _normalized_to_pixel_coordinates(
-                        left_eye[0],
-                        left_eye[1],
+                        left_ear_tragion[0],
+                        left_ear_tragion[1],
                         self.img_width,
                         self.img_height)], 
                     dtype="double")
