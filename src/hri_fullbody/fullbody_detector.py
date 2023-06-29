@@ -19,9 +19,9 @@ import rosparam
 import rospy
 import tf
 
-from sensor_msgs.msg import Image, CameraInfo, RegionOfInterest
+from sensor_msgs.msg import Image, CameraInfo
 from sensor_msgs.msg import JointState
-from hri_msgs.msg import Skeleton2D, NormalizedPointOfInterest2D, IdsList
+from hri_msgs.msg import Skeleton2D, NormalizedPointOfInterest2D, NormalizedRegionOfInterest2D, IdsList
 from message_filters import ApproximateTimeSynchronizer, Subscriber
 from geometry_msgs.msg import TwistStamped, PointStamped
 
@@ -150,7 +150,7 @@ def _make_2d_skeleton_msg(header, pose_2d):
     return skel
 
 
-def _get_bounding_box_limits(landmarks, image_width, image_height):
+def _get_bounding_box_limits(landmarks):
     x_max = 0.0
     y_max = 0.0
     x_min = 1.0
@@ -166,10 +166,6 @@ def _get_bounding_box_limits(landmarks, image_width, image_height):
         if y_min > data_point.y:
             y_min = data_point.y
 
-    x_min, y_min = _normalized_to_pixel_coordinates(
-        x_min, y_min, image_width, image_height)
-    x_max, y_max = _normalized_to_pixel_coordinates(
-        x_max, y_max, image_width, image_height)
     return x_min, y_min, x_max, y_max
 
 
@@ -268,7 +264,7 @@ class FullbodyDetector:
                         queue_size=1),
                     Subscriber(
                         "/humans/bodies/"+self.body_id+"/roi",
-                        RegionOfInterest,
+                        NormalizedRegionOfInterest2D,
                         queue_size=1),
                     Subscriber(
                         "/depth_image",
@@ -343,7 +339,7 @@ class FullbodyDetector:
                 queue_size=1)
             self.roi_pub = rospy.Publisher(
                 "/humans/bodies/"+body_id+"/roi",
-                RegionOfInterest,
+                NormalizedRegionOfInterest2D,
                 queue_size=1)
 
         self.body_filtered_position = [None] * 3
@@ -743,8 +739,8 @@ class FullbodyDetector:
                 self.rgb_info,
                 self.depth_info,
                 self.image_depth,
-                self.roi.x_offset,
-                self.roi.y_offset
+                self.roi.xmin,
+                self.roi.ymin
             )
         elif self.body_position_estimation[0]:
             torso_res = self.body_position_estimation
@@ -893,10 +889,10 @@ class FullbodyDetector:
         image_rgb.flags.writeable = True
         self.image = image_rgb
 
-        self.x_min_person = img_width
-        self.y_min_person = img_height
-        self.x_max_person = 0
-        self.y_max_person = 0
+        self.x_min_person = 1.
+        self.y_min_person = 1.
+        self.x_max_person = 0.
+        self.y_max_person = 0.
 
         ######## Face Detection Process ########
 
@@ -904,24 +900,19 @@ class FullbodyDetector:
             (self.x_min_face,
              self.y_min_face,
              self.x_max_face,
-             self.y_max_face) = _get_bounding_box_limits(
-                results.face_landmarks.landmark,
-                img_width,
-                img_height
-            )
-
-            self.x_min_person = int(min(
+             self.y_max_face) = _get_bounding_box_limits(results.face_landmarks.landmark)
+            self.x_min_person = min(
                 self.x_min_person, 
-                self.x_min_face))
-            self.y_min_person = int(min(
+                self.x_min_face)
+            self.y_min_person = min(
                 self.y_min_person, 
-                self.y_min_face))
-            self.x_max_person = int(max(
+                self.y_min_face)
+            self.x_max_person = max(
                 self.x_max_person, 
-                self.x_max_face))
-            self.y_max_person = int(max(
+                self.x_max_face)
+            self.y_max_person = max(
                 self.y_max_person, 
-                self.y_max_face))
+                self.y_max_face)
 
             if not self.use_depth and hasattr(self, "K"):
                 # K = camera intrisic matrix. See method camera_info_callback 
@@ -1030,21 +1021,19 @@ class FullbodyDetector:
             (self.x_min_hand_left,
              self.y_min_hand_left,
              self.x_max_hand_left,
-             self.y_max_hand_left) = _get_bounding_box_limits(landmarks,
-                                                              img_width,
-                                                              img_height)
-            self.x_min_person = int(min(
+             self.y_max_hand_left) = _get_bounding_box_limits(landmarks)
+            self.x_min_person = min(
                 self.x_min_person, 
-                self.x_min_hand_left))
-            self.y_min_person = int(min(
+                self.x_min_hand_left)
+            self.y_min_person = min(
                 self.y_min_person, 
-                self.y_min_hand_left))
-            self.x_max_person = int(max(
+                self.y_min_hand_left)
+            self.x_max_person = max(
                 self.x_max_person, 
-                self.x_max_hand_left))
-            self.y_max_person = int(max(
+                self.x_max_hand_left)
+            self.y_max_person = max(
                 self.y_max_person, 
-                self.y_max_hand_left))
+                self.y_max_hand_left)
 
         if hasattr(results.right_hand_landmarks, 'landmark'):
             pose_keypoints = protobuf_to_dict(results.pose_landmarks)
@@ -1059,21 +1048,19 @@ class FullbodyDetector:
             (self.x_min_hand_right,
              self.y_min_hand_right,
              self.x_max_hand_right,
-             self.y_max_hand_right) = _get_bounding_box_limits(landmarks,
-                                                               img_width,
-                                                               img_height)
-            self.x_min_person = int(min(
+             self.y_max_hand_right) = _get_bounding_box_limits(landmarks)
+            self.x_min_person = min(
                 self.x_min_person, 
-                self.x_min_hand_right))
-            self.y_min_person = int(min(
+                self.x_min_hand_right)
+            self.y_min_person = min(
                 self.y_min_person, 
-                self.y_min_hand_right))
-            self.x_max_person = int(max(
+                self.y_min_hand_right)
+            self.x_max_person = max(
                 self.x_max_person, 
-                self.x_max_hand_right))
-            self.y_max_person = int(max(
+                self.x_max_hand_right)
+            self.y_max_person = max(
                 self.y_max_person, 
-                self.y_max_hand_right))
+                self.y_max_hand_right)
 
         ############################################
 
@@ -1116,21 +1103,19 @@ class FullbodyDetector:
                 (self.x_min_body,
                  self.y_min_body,
                  self.x_max_body,
-                 self.y_max_body) = _get_bounding_box_limits(landmarks,
-                                                                img_width,
-                                                                img_height)
-                self.x_min_person = int(min(
+                 self.y_max_body) = _get_bounding_box_limits(landmarks)
+                self.x_min_person = min(
                     self.x_min_person, 
-                    self.x_min_body))
-                self.y_min_person = int(min(
+                    self.x_min_body)
+                self.y_min_person = min(
                     self.y_min_person, 
-                    self.y_min_body))
-                self.x_max_person = int(max(
+                    self.y_min_body)
+                self.x_max_person = max(
                     self.x_max_person, 
-                    self.x_max_body))
-                self.y_max_person = int(max(
+                    self.x_max_body)
+                self.y_max_person = max(
                     self.y_max_person, 
-                    self.y_max_body))                
+                    self.y_max_body)                
             self.is_body_detected = True
         else:
             self.is_body_detected = False
@@ -1140,16 +1125,17 @@ class FullbodyDetector:
             ids_list = IdsList()
             if self.x_min_person < self.x_max_person \
                 and self.y_min_person < self.y_max_person:
-                self.x_min_person = max(0, self.x_min_person)
-                self.y_min_person = max(0, self.y_min_person)
-                self.x_max_person = min(img_width, self.x_max_person)
-                self.y_max_person = min(img_height, self.y_max_person)
+                self.x_min_person = max(0., self.x_min_person)
+                self.y_min_person = max(0., self.y_min_person)
+                self.x_max_person = min(1., self.x_max_person)
+                self.y_max_person = min(1., self.y_max_person)
                 ids_list.ids = [self.body_id]
-                roi = RegionOfInterest()
-                roi.x_offset = self.x_min_person
-                roi.y_offset = self.y_min_person
-                roi.width = self.x_max_person - self.x_min_person
-                roi.height = self.y_max_person - self.y_min_person
+                roi = NormalizedRegionOfInterest2D()
+                roi.xmin = self.x_min_person
+                roi.ymin = self.y_min_person
+                roi.xmax = self.x_max_person
+                roi.ymax = self.y_max_person
+                roi.c = 0.5 # TODO: compute confidence from mediapipe landmarks confidence
                 self.roi_pub.publish(roi)
             self.ids_pub.publish(ids_list)
 
@@ -1175,8 +1161,6 @@ class FullbodyDetector:
             header = copy.copy(rgb_info.header)
         self.depth_info = depth_info
         self.rgb_info = rgb_info
-        self.x_offset = roi.x_offset
-        self.y_offset = roi.y_offset
         self.roi = roi
         self.detect(rgb_img, header)
 
@@ -1200,11 +1184,11 @@ class FullbodyDetector:
             header = copy.copy(rgb_info.header)
         self.depth_info = depth_info
         self.rgb_info = rgb_info
-        self.x_offset = 0
-        self.y_offset = 0
-        self.roi = RegionOfInterest()
-        self.roi.x_offset = 0
-        self.roi.y_offset = 0
+        self.roi = NormalizedRegionOfInterest2D()
+        self.roi.xmin = 0.
+        self.roi.ymin = 0.
+        self.roi.xmax = 1.
+        self.roi.ymax = 1.
         self.detect(rgb_img, header)
 
     def image_callback_rgb(self, rgb_img, rgb_info):

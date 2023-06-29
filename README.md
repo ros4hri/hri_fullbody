@@ -112,8 +112,8 @@ points published by the node.
   ([sensor_msgs/Image](http://docs.ros.org/en/api/sensor_msgs/html/msg/Image.html)):
   image used to estimate the 3D body pose.
 - `/humans/bodies/<body_id>/roi`
-  ([sensor_msgs/RegionOfInterest](http://docs.ros.org/en/api/sensor_msgs/html/msg/RegionOfInterest.html)):
-  body bounding box in full rgb image coordinates.
+  ([hri_msgs/NormalizedRegionOfInterest2D](http://docs.ros.org/en/noetic/api/hri_msgs/html/msg/NormalizedRegionOfInterest2D.html)):
+  body bounding box in normalized image coordinates.
 
 
 #### Published topics
@@ -139,8 +139,8 @@ points published by the node.
   list of the bodies currently detected. There will be only
   one body in the list.
 - `/humans/bodies/<body_id>/roi`
-  ([sensor_msgs/RegionOfInterest](http://docs.ros.org/en/api/sensor_msgs/html/msg/RegionOfInterest.html)):
-  body bounding box in full rgb image coordinates.
+  ([hri_msgs/NormalizedRegionOfInterest2D](http://docs.ros.org/en/noetic/api/hri_msgs/html/msg/NormalizedRegionOfInterest2D.html)):
+  body bounding box in normalized image coordinates.
 
 Visualization
 -------------
