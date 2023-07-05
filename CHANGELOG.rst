@@ -2,6 +2,12 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* fix bug in left ear tragion publish
+* change RoI message type to hri_msgs/NormalizedRegionOfInterest2D
+* Contributors: Luka Juricic
+
 0.1.8 (2023-05-23)
 ------------------
 * disable publishing of face_XXX and gaze_XXX frames
