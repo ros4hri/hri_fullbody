@@ -2,8 +2,8 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.9 (2023-07-05)
+------------------
 * fix bug in left ear tragion publish
 * change RoI message type to hri_msgs/NormalizedRegionOfInterest2D
 * Contributors: Luka Juricic
