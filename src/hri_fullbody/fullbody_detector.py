@@ -107,6 +107,10 @@ FM_LEFT_EAR_TRAGION = 454
 # body detection processing time in ms signalling a timeout error
 BODY_DETECTION_PROC_TIMEOUT_ERROR = 5000.
 
+# Mediapipe Holistic variables
+MP_HOL_DETECTION_CONFIDENCE = 0.5
+MP_HOL_TRACKING_CONFIDENCE = 0.5
+
 
 def _normalized_to_pixel_coordinates(
         normalized_x: float, normalized_y: float, image_width: int,
@@ -190,8 +194,9 @@ class FullbodyDetector:
         self.publish_face = False
 
         self.detector = mp_holistic.Holistic(
-            min_detection_confidence=0.5, min_tracking_confidence=0.5)
-
+            min_detection_confidence=MP_HOL_DETECTION_CONFIDENCE,
+            min_tracking_confidence=MP_HOL_TRACKING_CONFIDENCE)
+            
         self.processing_lock = threading.Lock()
         self.skipped_images = 0
         self.start_skipping_ts = rospy.Time.now()
@@ -883,7 +888,19 @@ class FullbodyDetector:
         image_rgb.flags.writeable = False
         image_rgb = cv2.cvtColor(image_rgb, cv2.COLOR_BGR2RGB)
 
-        results = self.detector.process(image_rgb)
+        try:
+            results = self.detector.process(image_rgb)
+        except RuntimeError as err:
+            if 'InverseMatrixCalculator' in str(err):
+                rospy.logwarn("Matrix inversion error in processing the current image, resetting mediapipe holistic")
+                self.processing_lock.release()
+                self.detector = mp_holistic.Holistic(
+                    min_detection_confidence=MP_HOL_DETECTION_CONFIDENCE,
+                    min_tracking_confidence=MP_HOL_TRACKING_CONFIDENCE)
+                return
+            else:
+                raise
+
         self.processing_lock.release()
 
         image_rgb.flags.writeable = True
