@@ -2,8 +2,8 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.1.10 (2023-07-14)
+-------------------
 * reset mediapipe backend in case of matrix inversion error
 * Contributors: Luka Juricic
 
