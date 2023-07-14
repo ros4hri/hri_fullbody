@@ -2,6 +2,11 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* reset mediapipe backend in case of matrix inversion error
+* Contributors: Luka Juricic
+
 0.1.9 (2023-07-05)
 ------------------
 * fix bug in left ear tragion publish
