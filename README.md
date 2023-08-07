@@ -26,9 +26,11 @@ of the currently tracked bodies.
 These two modes are required since Mediapipe body estimation
 is not able to estimate more than one body pose per frame. 
 Therefore, in case we want more than one body pose estimated, 
-the adopted strategy is to use a human bounding box detection algorithm
-to get a cropped image of each one of the humans in the scene, 
-and then to run body pose estimation for each one of these images.
+the adopted strategy is to rely on some other package implementing a human
+body detection (and tracking in the best case) algorithm.
+Such package should provide the `hri_fullbody detect` node the IDs of the
+detected bodies and the relative images, cropped from the original image
+following the detected bounding boxes.
 
 To estimate the body position, the node does not need a RGB-D camera,
 only RGB is required. However, using RGB-D camera provides a more 
