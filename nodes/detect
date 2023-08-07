@@ -97,7 +97,7 @@ class MultibodyManager:
             KeyValue(key="Single body detector mode", value=str(self.single_body)),
             KeyValue(key="Currently detected bodies", 
                      value=str(sum([v.is_body_detected for v in self.detected_bodies.values()]))),
-            KeyValue(key="Last detected body ID", value=str(next(reversed(self.detected_bodies)))),
+            KeyValue(key="Last detected body ID", value=str(next(reversed(self.detected_bodies), ''))),
             KeyValue(key="Detection processing time",
                      value="{:.2f}".format(proc_time * 1000) + "ms"),
         ]
