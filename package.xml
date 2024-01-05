@@ -1,31 +1,47 @@
 <?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>hri_fullbody</name>
-  <version>0.1.10</version>
+  <version>1.9.9</version>
   <description>ROS node implementing 2D/3D full-body pose estimation, using Google Mediapipe. Part of ROS4HRI.</description>
-
+  <author email="severin.lemaignan@pal-robotics.com">Séverin Lemaignan</author>
+  <author email="lorenzo.ferrini@pal-robotics.com">Lorenzo Ferrini</author>
+  <license>Apache License 2.0</license>
+  <maintainer email="severin.lemaignan@pal-robotics.com">Séverin Lemaignan</maintainer>
   <maintainer email="lorenzo.ferrini@pal-robotics.com">Lorenzo Ferrini</maintainer>
 
-  <license>BSD</license>
-
-  <buildtool_depend>catkin</buildtool_depend>
-  <depend>rospy</depend>
-  <depend>sensor_msgs</depend>
-  <depend>geometry_msgs</depend>
-  <depend>hri_msgs</depend>
-  <depend>human_description</depend>
-  <depend>image_geometry</depend>
-  <depend>python3-mediapipe</depend>
-  <depend>python3-ikpy</depend>
-  <depend>diagnostic_msgs</depend>
-  <exec_depend>rosconsole</exec_depend>
-  <exec_depend>tf</exec_depend>
+  <exec_depend>builtin_interfaces</exec_depend>
+  <exec_depend>cv_bridge</exec_depend>
+  <exec_depend>diagnostic_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>hri_msgs</exec_depend>
+  <exec_depend>human_description</exec_depend>
+  <exec_depend>image_geometry</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>message_filters</exec_depend>
+  <exec_depend>python3-ikpy</exec_depend>
+  <exec_depend>python3-mediapipe</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-opencv</exec_depend>
+  <exec_depend>python3-protobuf</exec_depend>
+  <exec_depend>python3-transforms3d</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>rcl_interfaces</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>tf_transformations</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>xacro</exec_depend>
 
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
 
-  <!-- The export tag contains other, unspecified, tags -->
   <export>
-    <!-- Other tools can request additional information be placed here -->
-
+    <build_type>ament_python</build_type>
   </export>
 </package>
+

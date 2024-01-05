@@ -1,3 +1,19 @@
+# Copyright (c) 2024 PAL Robotics S.L. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Original work from: https://github.com/benhodgson/protobuf-to-dict
+
 import sys
 
 from google.protobuf.message import Message
@@ -10,7 +26,6 @@ __all__ = [
     "dict_to_protobuf",
     "REVERSE_TYPE_CALLABLE_MAP",
 ]
-
 
 EXTENSION_CONTAINER = "___X"
 
@@ -102,7 +117,8 @@ def dict_to_protobuf(
     type_callable_map=REVERSE_TYPE_CALLABLE_MAP,
     strict=True,
 ):
-    """Populates a protobuf model from a dictionary.
+    """
+    Populate a protobuf model from a dictionary.
 
     :param pb_klass_or_instance: a protobuf message class, or an protobuf instance
     :type pb_klass_or_instance: a type or instance of a subclass of google.protobuf.message.Message
@@ -126,7 +142,8 @@ def _get_field_mapping(pb, dict_value, strict):
             continue
         if key not in pb.DESCRIPTOR.fields_by_name:
             if strict:
-                raise KeyError("%s does not have a field called %s" % (pb, key))
+                raise KeyError(
+                    "%s does not have a field called %s" % (pb, key))
             continue
         field_mapping.append(
             (pb.DESCRIPTOR.fields_by_name[key], value, getattr(pb, key, None))
@@ -195,6 +212,7 @@ def _string_to_enum(field, input_value):
         input_value = enum_dict[input_value].number
     except KeyError:
         raise KeyError(
-            "`%s` is not a valid value for field `%s`" % (input_value, field.name)
+            "`%s` is not a valid value for field `%s`" % (
+                input_value, field.name)
         )
     return input_value

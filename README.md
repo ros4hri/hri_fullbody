@@ -6,6 +6,13 @@ hri_fullbody
 Overview
 --------
 
+> :warning: some of the links are yet to be updated and
+> may be pointing to the original ROS page. As soon
+> as all the involved components will be officially
+> documented for ROS 2 as well, we will update
+> this document.
+
+
 `hri_fullbody` is a [ROS4HRI](https://wiki.ros.org/hri)-compatible
 3D body pose estimation node.
 
@@ -38,13 +45,13 @@ accurate depth estimation.
 
 **Important**: to estimate the body depth without using a depth sensor, 
 a calibrated RGB camera is required. 
-You can follow [this tutorial](http://wiki.ros.org/camera_calibration/Tutorials/MonocularCalibration)
+You can follow [this tutorial](https://navigation.ros.org/tutorials/docs/camera_calibration.html)
 to properly calibrate your camera.
 
 Launch
 ------
 
-`roslaunch hri_fullbody hri_fullbody.launch <parameters>`
+`ros2 launch hri_fullbody hri_fullbody.launch.py <parameters>`
 
 ROS API
 -------
@@ -53,29 +60,32 @@ ROS API
 
 #### Node parameters:
 
-- `~single_body` (default: `True`): whether or not running in single
+- `single_body` (default: `True`): whether or not running in single
   body mode (see above for the single body vs multi-body modes). 
-- `~use_depth` (default: `False`): whether or not to rely on depth images 
+- `use_depth` (default: `False`): whether or not to rely on depth images 
   for estimating body movement in the scene. When this is `False`, the node
   estimates the body position in the scene solving a P6P problem for the
   face and approximating the position from this, using pinhole camera
   model geometry. 
-- `~stickman_debug` (default: `False`): whether or not to publish frames
+- `stickman_debug` (default: `False`): whether or not to publish frames
   representing the body skeleton directly using the raw results from mediapipe
   3D body pose estimation. These debug frames are *not* oriented to align 
   with the body links (ie, only the 3D location of the frame is useful).
+- `human_description_<body_id>` (read-only): the URDF generated for `body_<body_id>`.
+  The node generates a URDF for each detected body and uses them to
+  perform kinematically-consistent 3D body pose estimation.
 
 #### hri_fullbody.launch parameters:
 
-- `single_body`: equivalent to `~single_body` node parameter.
-- `use_depth`: equivalent to `~use_depth` node parameter.
-- `stickman_debug`: equivalent to `~stickman_debug` node parameter.
-- `rgb_camera` (default: `/camera/color`): rgb camera topics namespace.
+- `single_body` (default: `True`): equivalent to `single_body` node parameter.
+- `use_depth` (default: `False`): equivalent to `use_depth` node parameter.
+- `stickman_debug` (default: `False`): equivalent to `stickman_debug` node parameter.
+- `rgb_camera` (default: ` `): rgb camera topics namespace.
 - `rgb_camera_topic` (default: `$(arg rgb_camera)/image_raw`): rgb camera
   raw image topic. 
 - `rgb_camera_info` (default: `$(arg rgb_camera)/camera_info`): rgb camera
   info topic.
-- `depth_camera` (default: `/camera/depth`): depth camera topics namespace. 
+- `depth_camera` (default: ` `): depth camera topics namespace. 
 - `depth_camera_topic` (default: `$(arg depth_camera)/image_rect_raw`): depth 
   camera rectified raw image topic.
 - `depth_camera_info` (default: `$(arg depth_camera)/camera_info`): depth 
@@ -90,19 +100,19 @@ points published by the node.
 #### Subscribed topics
 
 - `/camera_info`
-  ([sensor_msgs/CameraInfo](http://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CameraInfo.html)):
+  ([sensor_msgs/CameraInfo](https://docs.ros2.org/latest/api/sensor_msgs/msg/CameraInfo.html)):
   rgb camera meta information
 - `/depth_image`
-  ([sensor_msgs/Image](http://docs.ros.org/en/api/sensor_msgs/html/msg/Image.html)):
+  ([sensor_msgs/Image](https://docs.ros2.org/latest/api/sensor_msgs/msg/Image.html)):
   depth image used to estimate the 3D body position with respect to the camera.
 - `/depth_info`
-  ([sensor_msgs/CameraInfo](http://docs.ros.org/en/noetic/api/sensor_msgs/html/msg/CameraInfo.html)):
+  ([sensor_msgs/CameraInfo](https://docs.ros2.org/latest/api/sensor_msgs/msg/CameraInfo.html)):
   depth camera meta information
 
 ##### Single body mode only:
 
 - `/image`
-  ([sensor_msgs/Image](http://docs.ros.org/en/api/sensor_msgs/html/msg/Image.html)):
+  ([sensor_msgs/Image](https://docs.ros2.org/latest/api/sensor_msgs/msg/Image.html)):
   rgb image, processed for body detection and 3D body pose estimation.
 
 ##### Multi-body mode only:
@@ -111,7 +121,7 @@ points published by the node.
   ([hri_msgs/IdsList](http://docs.ros.org/en/api/hri_msgs/html/msg/IdsList.html)):
   list of the bodies currently detected.
 - `/humans/bodies/<body_id>/cropped`
-  ([sensor_msgs/Image](http://docs.ros.org/en/api/sensor_msgs/html/msg/Image.html)):
+  ([sensor_msgs/Image](https://docs.ros2.org/latest/api/sensor_msgs/msg/Image.html)):
   image used to estimate the 3D body pose.
 - `/humans/bodies/<body_id>/roi`
   ([hri_msgs/NormalizedRegionOfInterest2D](http://docs.ros.org/en/noetic/api/hri_msgs/html/msg/NormalizedRegionOfInterest2D.html)):
@@ -124,14 +134,14 @@ points published by the node.
   ([hri_msgs/Skeleton2D](http://docs.ros.org/en/api/hri_msgs/html/msg/Skeleton2D.html)):
   detected 2D skeleton points.
 - `/humans/bodies/<body_id>/joint_states`
-  ([sensor_msgs/JointState](http://docs.ros.org/en/lunar/api/sensor_msgs/html/msg/JointState.html)):
+  ([sensor_msgs/JointState](https://docs.ros2.org/latest/api/sensor_msgs/msg/JointState.html)):
   skeleton joints state.
 - `/humans/bodies/<body_id>/position`:
-  ([geometry_msgs/PointStamped](http://docs.ros.org/en/lunar/api/geometry_msgs/html/msg/PointStamped.html)):
+  ([geometry_msgs/PointStamped](https://docs.ros2.org/latest/api/geometry_msgs/msg/PointStamped.html)):
   filtered body position, representing the point between the hips of the tracked body. Only published 
   when `use_depth = True`.
 - `/humans/bodies/<body_id>/velocity`:
-  ([geometry_msgs/TwistStamped](http://docs.ros.org/en/lunar/api/geometry_msgs/html/msg/TwistStamped.html)):
+  ([geometry_msgs/TwistStamped](https://docs.ros2.org/latest/api/geometry_msgs/msg/TwistStamped.html)):
   filtered body velocity. Only published when `use_depth = True`.
 
 ##### Single body mode only:
