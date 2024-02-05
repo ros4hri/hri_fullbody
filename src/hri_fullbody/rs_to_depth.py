@@ -7,6 +7,7 @@ def rgb_to_xyz(
         y_rgb,
         rgb_camera_info,
         depth_camera_info,
+        depth_data_encoding,
         depth_data,
         roi_xmin = 0.,
         roi_ymin = 0.):
@@ -32,7 +33,17 @@ def rgb_to_xyz(
                * depth_model.fy()
                / rgb_model.fy())
               + depth_model.cy())
-    z = depth_data[y_d][x_d]/1000
+    
+    if depth_data_encoding == '32FC1':
+        # Get depth data encoded as 32bit/m
+        z = depth_data[y_d][x_d]
+    elif depth_data_encoding == '16UC1':
+        # Convert depth data encoded as 16bit/mm to m
+        z = depth_data[y_d][x_d]/1000
+    else:
+        raise ValueError('Unexpected encoding {}. '.format(depth_data_encoding) +\
+                         'Depth encoding should be 16UC1 or `32FC1`.')
+    
     x = (x_d - depth_model.cx())*z/depth_model.fx()
     y = (y_d - depth_model.cy())*z/depth_model.fy()
 

@@ -743,6 +743,7 @@ class FullbodyDetector:
                 torso_px[1],
                 self.rgb_info,
                 self.depth_info,
+                self.depth_encoding,
                 self.image_depth,
                 self.roi.xmin,
                 self.roi.ymin
@@ -1171,6 +1172,8 @@ class FullbodyDetector:
         rgb_img = self.br.imgmsg_to_cv2(rgb_img)
         image_depth = self.br.imgmsg_to_cv2(depth_img, "16UC1")
         self.image_depth = image_depth
+        if not hasattr(self, 'depth_encoding'):
+            self.depth_encoding = depth_img.encoding
         if depth_info.header.stamp > rgb_info.header.stamp:
             header = copy.copy(depth_info.header)
             header.frame_id = rgb_info.header.frame_id # to check 
@@ -1194,6 +1197,8 @@ class FullbodyDetector:
         rgb_img = self.br.imgmsg_to_cv2(rgb_img)
         image_depth = self.br.imgmsg_to_cv2(depth_img, "16UC1")
         self.image_depth = image_depth
+        if not hasattr(self, 'depth_encoding'):
+            self.depth_encoding = depth_img.encoding
         if depth_info.header.stamp > rgb_info.header.stamp:
             header = copy.copy(depth_info.header)
             header.frame_id = rgb_info.header.frame_id # to check 
