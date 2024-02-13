@@ -843,7 +843,7 @@ class FullbodyDetector:
         elif self.body_position_estimation[0]:
             torso_res = self.body_position_estimation
         else:
-            torso_res = np.array([0, 0, 0])
+            torso_res = np.array([0., 0., 0.])
 
         # Publishing tf transformations #
 
@@ -1261,8 +1261,8 @@ class FullbodyDetector:
                              depth_img: Image,
                              depth_info: CameraInfo):
         """Handle incoming RGB and depth images."""
-        rgb_img = self.br.imgmsg_to_cv2(rgb_img)
-        image_depth = self.br.imgmsg_to_cv2(depth_img, "16UC1")
+        rgb_img = self.br.imgmsg_to_cv2(rgb_img, desired_encoding="bgr8")
+        image_depth = self.br.imgmsg_to_cv2(depth_img, desired_encoding="16UC1")
         self.image_depth = image_depth
         if depth_info.header.stamp > rgb_info.header.stamp:
             header = copy.copy(depth_info.header)
@@ -1284,8 +1284,8 @@ class FullbodyDetector:
             self.skeleton_generation()
             self.skeleton_to_set = False
 
-        rgb_img = self.br.imgmsg_to_cv2(rgb_img)
-        image_depth = self.br.imgmsg_to_cv2(depth_img, "16UC1")
+        rgb_img = self.br.imgmsg_to_cv2(rgb_img, desired_encoding="bgr8")
+        image_depth = self.br.imgmsg_to_cv2(depth_img, desired_encoding="16UC1")
         self.image_depth = image_depth
         if _builtin_time_to_secs(depth_info.header.stamp) \
                 > _builtin_time_to_secs(rgb_info.header.stamp):
@@ -1316,8 +1316,7 @@ class FullbodyDetector:
                 self.human_description)
             return
 
-        rgb_img = self.br.imgmsg_to_cv2(rgb_img)
-
+        rgb_img = self.br.imgmsg_to_cv2(rgb_img, desired_encoding="bgr8")
         header = copy.copy(rgb_info.header)
         self.rgb_info = rgb_info
         self.detect(rgb_img, header)
