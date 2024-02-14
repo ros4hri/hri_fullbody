@@ -2,8 +2,8 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.0.0 (2024-02-14)
+------------------
 * removing bridging bug
   when using CvBridge.imgmsg_to_cv2 function without specifying the
   desired encoding to "bgr8", the returned image only had two
