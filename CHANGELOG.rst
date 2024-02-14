@@ -2,6 +2,17 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* removing bridging bug
+  when using CvBridge.imgmsg_to_cv2 function without specifying the
+  desired encoding to "bgr8", the returned image only had two
+  channels if it's coming from the usb_cam node. Fixed the issue
+* ros 2 porting
+* clarify documentation for multibody case
+* fix multibody diagnostics bug
+* Contributors: Luka Juricic, lorenzoferrini
+
 0.1.10 (2023-07-14)
 -------------------
 * reset mediapipe backend in case of matrix inversion error
