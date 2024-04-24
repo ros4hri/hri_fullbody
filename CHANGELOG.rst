@@ -2,6 +2,11 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* add module
+* Contributors: lorenzoferrini
+
 2.0.0 (2024-02-14)
 ------------------
 * removing bridging bug
