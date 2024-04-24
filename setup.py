@@ -9,8 +9,11 @@ setup(
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
+        ('share/ament_index/resource_index/pal_system_module',
+            ['module/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        ('share/' + package_name + '/launch', ['launch/hri_fullbody.launch.py'])
+        ('share/' + package_name + '/launch', ['launch/hri_fullbody.launch.py']),
+        ('share/' + package_name + '/module', ['module/hri_fullbody_module.yaml']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
