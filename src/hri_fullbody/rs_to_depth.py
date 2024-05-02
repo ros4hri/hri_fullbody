@@ -43,6 +43,9 @@ def rgb_to_xyz(
     else:
         raise ValueError('Unexpected encoding {}. '.format(depth_data_encoding) +\
                          'Depth encoding should be 16UC1 or `32FC1`.')
+        
+    if np.isnan(z):
+        z = 0.0
     
     x = (x_d - depth_model.cx())*z/depth_model.fx()
     y = (y_d - depth_model.cy())*z/depth_model.fy()

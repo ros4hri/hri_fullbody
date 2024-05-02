@@ -1162,6 +1162,17 @@ class FullbodyDetector:
 
         ########################################
 
+
+    def set_depth_image(self,depth_img):
+        if not hasattr(self, 'depth_encoding'):
+            self.depth_encoding = depth_img.encoding
+
+        if self.depth_encoding != '32FC1' and self.depth_encoding != '16UC1':
+            raise ValueError('Unexpected encoding {}. '.format(self.depth_encoding) +
+                             'Depth encoding should be 16UC1 or `32FC1`.')
+
+        self.image_depth = self.br.imgmsg_to_cv2(depth_img, desired_encoding=self.depth_encoding)
+        
     def image_callback_depth(self, 
                 rgb_img, 
                 rgb_info, 
@@ -1170,10 +1181,7 @@ class FullbodyDetector:
                 depth_info):
 
         rgb_img = self.br.imgmsg_to_cv2(rgb_img)
-        image_depth = self.br.imgmsg_to_cv2(depth_img, "16UC1")
-        self.image_depth = image_depth
-        if not hasattr(self, 'depth_encoding'):
-            self.depth_encoding = depth_img.encoding
+        self.set_depth_image(depth_img)
         if depth_info.header.stamp > rgb_info.header.stamp:
             header = copy.copy(depth_info.header)
             header.frame_id = rgb_info.header.frame_id # to check 
@@ -1195,10 +1203,7 @@ class FullbodyDetector:
             self.skeleton_to_set = False
 
         rgb_img = self.br.imgmsg_to_cv2(rgb_img)
-        image_depth = self.br.imgmsg_to_cv2(depth_img, "16UC1")
-        self.image_depth = image_depth
-        if not hasattr(self, 'depth_encoding'):
-            self.depth_encoding = depth_img.encoding
+        self.set_depth_image(depth_img)
         if depth_info.header.stamp > rgb_info.header.stamp:
             header = copy.copy(depth_info.header)
             header.frame_id = rgb_info.header.frame_id # to check 
@@ -1222,7 +1227,7 @@ class FullbodyDetector:
         if not rospy.has_param(self.human_description):
             rospy.logerr("URDF model of the human not yet available on the ROS parameter server.", self.human_description)
             return
-        
+
         rgb_img = self.br.imgmsg_to_cv2(rgb_img)        
 
         header = copy.copy(rgb_info.header)
