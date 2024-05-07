@@ -2,6 +2,12 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Support 32bits depth
+* Publish bodies' URDF on a topic instead of a parameter
+* Contributors: ferrangebelli
+
 2.0.1 (2024-04-24)
 ------------------
 * add module
