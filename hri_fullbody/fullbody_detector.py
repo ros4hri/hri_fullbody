@@ -30,16 +30,16 @@ import threading
 
 import rclpy
 from rclpy.node import Node
-from rcl_interfaces.msg import ParameterDescriptor
+from rclpy.qos import QoSProfile, QoSDurabilityPolicy
 import tf2_ros
 import tf_transformations
 
 from builtin_interfaces.msg import Time as TimeInterface
-from std_msgs.msg import Header
+from std_msgs.msg import Header, String
 from sensor_msgs.msg import Image, CameraInfo
 from sensor_msgs.msg import JointState
-from hri_msgs.msg import Skeleton2D, NormalizedPointOfInterest2D,\
-                         NormalizedRegionOfInterest2D, IdsList
+from hri_msgs.msg import Skeleton2D, NormalizedPointOfInterest2D, \
+    NormalizedRegionOfInterest2D, IdsList
 from message_filters import ApproximateTimeSynchronizer, Subscriber
 from geometry_msgs.msg import TwistStamped, PointStamped, TransformStamped
 
@@ -261,6 +261,7 @@ class FullbodyDetector:
 
         self.js_topic = "/humans/bodies/" + body_id + "/joint_states"
         skel_topic = "/humans/bodies/" + body_id + "/skeleton2d"
+        urdf_topic = "/humans/bodies/" + body_id + "/urdf"
 
         self.skel_pub = self.node.create_publisher(Skeleton2D,
                                                    skel_topic,
@@ -269,6 +270,13 @@ class FullbodyDetector:
         self.js_pub = self.node.create_publisher(JointState,
                                                  self.js_topic,
                                                  1)
+
+        latching_qos = QoSProfile(
+            depth=1,
+            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL)
+        self.urdf_pub = self.node.create_publisher(String,
+                                                   urdf_topic,
+                                                   qos_profile=latching_qos)
 
         self.br = CvBridge()
 
@@ -432,13 +440,7 @@ class FullbodyDetector:
                                     "<%s> (param name: human_description_%s)" % (
                                         self.body_id, self.body_id))
         self.human_description = "human_description_%s" % self.body_id
-        self.node.declare_parameter(
-            self.human_description,
-            self.urdf,
-            ParameterDescriptor(
-                description="Human URDF model.",
-                read_only=True)
-        )
+        self.urdf_pub.publish(String(data=self.urdf))
 
         self.urdf_file = io.StringIO(self.urdf)
         self.r_arm_chain = chain.Chain.from_urdf_file(
@@ -836,6 +838,7 @@ class FullbodyDetector:
                 torso_px[1],
                 self.rgb_info,
                 self.depth_info,
+                self.depth_encoding,
                 self.image_depth,
                 self.roi.xmin,
                 self.roi.ymin
@@ -1254,6 +1257,16 @@ class FullbodyDetector:
         self.detection_proc_duration = (
             self.node.get_clock().now() - self.detection_start_proc_time)
 
+    def set_depth_image(self, depth_img):
+        if not hasattr(self, 'depth_encoding'):
+            self.depth_encoding = depth_img.encoding
+
+        if self.depth_encoding != '32FC1' and self.depth_encoding != '16UC1':
+            raise ValueError('Unexpected encoding {}. '.format(self.depth_encoding) +
+                             'Depth encoding should be 16UC1 or `32FC1`.')
+
+        self.image_depth = self.br.imgmsg_to_cv2(depth_img, desired_encoding=self.depth_encoding)
+
     def image_callback_depth(self,
                              rgb_img: Image,
                              rgb_info: CameraInfo,
@@ -1262,8 +1275,9 @@ class FullbodyDetector:
                              depth_info: CameraInfo):
         """Handle incoming RGB and depth images."""
         rgb_img = self.br.imgmsg_to_cv2(rgb_img, desired_encoding="bgr8")
-        image_depth = self.br.imgmsg_to_cv2(depth_img, desired_encoding="16UC1")
-        self.image_depth = image_depth
+
+        self.set_depth_image(depth_img)
+
         if depth_info.header.stamp > rgb_info.header.stamp:
             header = copy.copy(depth_info.header)
             header.frame_id = rgb_info.header.frame_id  # to check
@@ -1285,8 +1299,9 @@ class FullbodyDetector:
             self.skeleton_to_set = False
 
         rgb_img = self.br.imgmsg_to_cv2(rgb_img, desired_encoding="bgr8")
-        image_depth = self.br.imgmsg_to_cv2(depth_img, desired_encoding="16UC1")
-        self.image_depth = image_depth
+
+        self.set_depth_image(depth_img)
+
         if _builtin_time_to_secs(depth_info.header.stamp) \
                 > _builtin_time_to_secs(rgb_info.header.stamp):
             header = copy.copy(depth_info.header)
@@ -1309,12 +1324,6 @@ class FullbodyDetector:
         if self.skeleton_to_set:
             self.skeleton_generation()
             self.skeleton_to_set = False
-
-        if not self.node.has_parameter(self.human_description):  # TODO
-            self.node.get_logger().error(
-                "URDF model of the human not yet available.",
-                self.human_description)
-            return
 
         rgb_img = self.br.imgmsg_to_cv2(rgb_img, desired_encoding="bgr8")
         header = copy.copy(rgb_info.header)
