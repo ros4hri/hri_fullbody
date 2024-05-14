@@ -495,7 +495,7 @@ class FullbodyDetector:
 
     def unregister(self):
         """Kill the robot state publisher."""
-        os.system("rosnode kill /robot_state_publisher_body_"+self.body_id)
+        self.proc.terminate()
         self.node.get_logger().warning('unregistered %s', self.body_id)
 
     def camera_info_callback(self, cameraInfo: CameraInfo):
