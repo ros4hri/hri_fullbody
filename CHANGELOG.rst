@@ -2,6 +2,11 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* removed old ros command
+* Contributors: lorenzoferrini
+
 2.1.0 (2024-05-07)
 ------------------
 * Support 32bits depth
