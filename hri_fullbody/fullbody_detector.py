@@ -300,7 +300,7 @@ class FullbodyDetector:
             self.image_subscriber = Subscriber(
                 self.node,
                 Image,
-                "/image",
+                "/image_raw",
                 qos_profile=1)
 
         if self.use_depth and self.multi_body:
@@ -418,7 +418,7 @@ class FullbodyDetector:
             1)
 
         self.image_info_sub = self.node.create_subscription(CameraInfo,
-                                                            "camera_info",
+                                                            "/camera_info",
                                                             self.camera_info_callback,
                                                             1)
 

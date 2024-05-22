@@ -1,0 +1,11 @@
+/hri_fullbody:
+  ros__parameters:
+    use_depth: false # Whether or not using depth to process the bodies position
+    stickman_debug: false # Whether or not using the stickman debugging visualization
+    single_body: true # Whether performing single or multiple bodies detection
+    diagnostic_period: 1.0 # Diagnostic period
+  remappings:
+    image: '/image_raw' # the input camera image topic
+    camera_info: '/camera_info' # the input camera info topic
+    depth_image: '/depth_image' # the input camera image topic
+    camera_info: '/depth_info' # the input camera info topic

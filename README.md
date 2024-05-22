@@ -51,7 +51,7 @@ to properly calibrate your camera.
 Launch
 ------
 
-`ros2 launch hri_fullbody hri_fullbody.launch.py <parameters>`
+`ros2 launch hri_fullbody hri_fullbody_with_args.launch.py <parameters>`
 
 ROS API
 -------
