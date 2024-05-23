@@ -300,7 +300,7 @@ class FullbodyDetector:
             self.image_subscriber = Subscriber(
                 self.node,
                 Image,
-                "/image_raw",
+                "image",
                 qos_profile=1)
 
         if self.use_depth and self.multi_body:
@@ -310,7 +310,7 @@ class FullbodyDetector:
                     Subscriber(
                         self.node,
                         CameraInfo,
-                        "/camera_info",
+                        "camera_info",
                         qos_profile=1),
                     Subscriber(
                         self.node,
@@ -320,12 +320,12 @@ class FullbodyDetector:
                     Subscriber(
                         self.node,
                         Image,
-                        "/depth_image",
+                        "depth_image",
                         qos_profile=1),
                     Subscriber(
                         self.node,
                         CameraInfo,
-                        "/depth_info",
+                        "depth_info",
                         qos_profile=1)
                 ],
                 10,
@@ -340,7 +340,7 @@ class FullbodyDetector:
                     Subscriber(
                         self.node,
                         CameraInfo,
-                        "/camera_info",
+                        "camera_info",
                         qos_profile=1)
                 ],
                 10,
@@ -355,17 +355,17 @@ class FullbodyDetector:
                     Subscriber(
                         self.node,
                         CameraInfo,
-                        "/camera_info",
+                        "camera_info",
                         qos_profile=1),
                     Subscriber(
                         self.node,
                         Image,
-                        "/depth_image",
+                        "depth_image",
                         qos_profile=1),
                     Subscriber(
                         self.node,
                         CameraInfo,
-                        "/depth_info",
+                        "depth_info",
                         qos_profile=1)
                 ],
                 10,
@@ -380,7 +380,7 @@ class FullbodyDetector:
                     Subscriber(
                         self.node,
                         CameraInfo,
-                        "/camera_info",
+                        "camera_info",
                         qos_profile=1)
                 ],
                 10,

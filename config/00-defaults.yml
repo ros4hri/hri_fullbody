@@ -5,7 +5,7 @@
     single_body: true # Whether performing single or multiple bodies detection
     diagnostic_period: 1.0 # Diagnostic period
   remappings:
-    image: '/image_raw' # the input camera image topic
-    camera_info: '/camera_info' # the input camera info topic
-    depth_image: '/depth_image' # the input camera image topic
-    camera_info: '/depth_info' # the input camera info topic
+    image: /image_raw # the default input camera image topic following generic usb_cam topic naming
+    camera_info: /camera_info # the input camera info topic
+    depth_image: /depth_image # the input camera image topic
+    depth_info: /depth_info # the input camera info topic
