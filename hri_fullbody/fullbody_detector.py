@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import io
-import os
 from ikpy import chain
 from hri_fullbody.jointstate import compute_jointstate, \
     HUMAN_JOINT_NAMES
