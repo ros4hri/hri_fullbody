@@ -2,6 +2,16 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* support for depth32 bit encoding for depth image
+* clarify documentation for multibody case
+* fix multibody diagnostics bug
+* Merge pull request #6 from TIAGo-WE-COBOT/depth_32bits
+  add support for 32bit/m depth encoding
+* add support for 32bit/m depth encoding
+* Contributors: Luca, Luka Juricic, Séverin Lemaignan, ferrangebelli
+
 0.1.10 (2023-07-14)
 -------------------
 * reset mediapipe backend in case of matrix inversion error
