@@ -2,8 +2,8 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.2.0 (2024-05-27)
+------------------
 * Updated topics naming convention in source code and configuration file. Fiexed bugs
 * add configuration management
 * removed unused import os
