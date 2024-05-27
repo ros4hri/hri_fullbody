@@ -2,6 +2,13 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* Updated topics naming convention in source code and configuration file. Fiexed bugs
+* add configuration management
+* removed unused import os
+* Contributors: Luka Juricic, Raquel Ros, lorenzoferrini
+
 2.1.1 (2024-05-21)
 ------------------
 * removed old ros command
