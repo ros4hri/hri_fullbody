@@ -2,8 +2,8 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.2.0 (2024-05-27)
+------------------
 * support for depth32 bit encoding for depth image
 * clarify documentation for multibody case
 * fix multibody diagnostics bug
