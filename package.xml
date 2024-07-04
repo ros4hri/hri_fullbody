@@ -19,6 +19,7 @@
   <exec_depend>image_geometry</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
+  <exec_depend>launch_pal</exec_depend>
   <exec_depend>message_filters</exec_depend>
   <exec_depend>python3-ikpy</exec_depend>
   <exec_depend>python3-mediapipe</exec_depend>
