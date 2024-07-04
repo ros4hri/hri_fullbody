@@ -2,8 +2,8 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.2.1 (2024-07-04)
+------------------
 * launch: use get_pal_configuration from launch_pal
 * Contributors: Séverin Lemaignan
 
