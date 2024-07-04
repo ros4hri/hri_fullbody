@@ -2,8 +2,8 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+2.2.2 (2024-07-04)
+------------------
 * linting
 * Contributors: Séverin Lemaignan
 
