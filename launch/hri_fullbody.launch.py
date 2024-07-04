@@ -16,6 +16,7 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch_pal import get_pal_configuration
 
+
 def generate_launch_description():
 
     pkg = 'hri_fullbody'
