@@ -2,6 +2,11 @@
 Changelog for package hri_fullbody
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* launch: use get_pal_configuration from launch_pal
+* Contributors: Séverin Lemaignan
+
 2.2.0 (2024-05-27)
 ------------------
 * Updated topics naming convention in source code and configuration file. Fiexed bugs
